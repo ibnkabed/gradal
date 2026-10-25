@@ -131,6 +131,17 @@ struct QuizDetailView: View {
                 } label: {
                     Label("مشاركة السجل (Excel)", systemImage: "tablecells")
                 }
+                if !store.countedScans(quiz).isEmpty {
+                    Button {
+                        do {
+                            shared = SharedFile(url: try store.gradedPapersFile(quiz))
+                        } catch {
+                            problem = "تعذّر إنشاء ملف الأوراق المصححة."
+                        }
+                    } label: {
+                        Label("الأوراق المصححة (PDF)", systemImage: "doc.richtext")
+                    }
+                }
                 if let paperId = quiz.paperId {
                     NavigationLink {
                         PaperReviewView(paperId: paperId) { _ in

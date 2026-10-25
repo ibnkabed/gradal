@@ -444,6 +444,14 @@ if args.count >= 4 && args[1] == "--geometry" {
     }
 }
 
+//   OMRCheck --graded <sheets dir> <sheet-layouts.json> <out dir>
+//     The correction copy of the first test sheets (GradedSelfTest.swift).
+if args.count >= 5 && args[1] == "--graded" {
+    exit(gradedSelfTest(sheets: URL(fileURLWithPath: args[2], isDirectory: true),
+                        layoutsURL: URL(fileURLWithPath: args[3]),
+                        out: URL(fileURLWithPath: args[4], isDirectory: true)) ? 0 : 1)
+}
+
 if args.count >= 3 && args[1] == "--sheet-selftest" {
     let selfTestLayouts: SheetLayouts
     do {

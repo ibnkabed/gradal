@@ -641,6 +641,52 @@ final class Store: ObservableObject {
         return url
     }
 
+    // MARK: - Correction copies
+
+    /// The stored review copy, kept as JPEG so a PDF embeds it as it is.
+    func reviewImage(_ scanId: String) -> CGImage? {
+        guard let data = try? Data(contentsOf: imageURL(scanId)),
+              let provider = CGDataProvider(data: data as CFData) else { return nil }
+        return CGImage(jpegDataProviderSource: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+    }
+
+    /// The paper as its correction copy: the photo with a green ring on each right letter and a red one on each
+    /// wrong or extra mark, each question's points and the score.
+    func gradedPage(_ scan: Scan, quiz: Quiz) -> GradedPage.Page {
+        let bubbles = quiz.sheet?.questionBubbles ?? []
+        let earned = Grading.perQuestion(quiz, answers: scan.answers)
+        let questions = (0..<max(quiz.questionCount, 0)).map { i in
+            GradedPage.Question(bubbles: i < bubbles.count ? bubbles[i] : [],
+                                answer: i < scan.answers.count ? scan.answers[i] : "",
+                                key: i < quiz.key.count ? quiz.key[i] : "", earned: i < earned.count ? earned[i] : 0)
+        }
+        let g = grade(scan, quiz: quiz)
+        return GradedPage.Page(image: reviewImage(scan.id), questions: questions, earned: g.earned, possible: g.possible,
+                               scoreLabel: quiz.isArabic ? "الدرجة" : "Score",
+                               noImage: quiz.isArabic ? "صورة هذه الورقة غير متاحة" : "No photo of this paper")
+    }
+
+    var bubbleRadiusMm: Double { (LayoutStore.shared?.bubbleDiameterMm ?? 3.6) / 2 }
+
+    /// Every counted paper of the quiz as its correction copy, one page each, in one PDF: class by class in the
+    /// quiz's order, list order inside a class, then the papers whose student is unknown.
+    func gradedPapersFile(_ quiz: Quiz) throws -> URL {
+        let classIds = quiz.classIds
+        func rank(_ scan: Scan) -> (Int, Int, String) {
+            guard let st = resolvedStudent(scan, quiz: quiz) else { return (Int.max, Int.max, scan.gradalId) }
+            return (classIds.firstIndex { st.classIds.contains($0) } ?? classIds.count, st.order, st.name)
+        }
+        let scans = countedScans(quiz).sorted { rank($0) < rank($1) }
+        let data = GradedPage.pdf(scans.map { gradedPage($0, quiz: quiz) }, bubbleRadiusMm: bubbleRadiusMm)
+        let safe = String(quiz.name.filter { !"/\\:?*\"<>|".contains($0) }).trimmingCharacters(in: .whitespaces)
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("graded", isDirectory: true)
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let tail = quiz.isArabic ? "الأوراق المصححة" : "Graded papers"
+        let url = dir.appendingPathComponent("\(safe.isEmpty ? "Papers" : safe) (\(quiz.code)) — \(tail).pdf")
+        try data.write(to: url, options: .atomic)
+        return url
+    }
+
     // MARK: - Backup
 
     func exportBackup() throws -> URL {

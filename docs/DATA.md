@@ -4,7 +4,7 @@ Everything lives on the iPhone, in `Application Support/Gradal/`:
 
 - `store.json`: classes, students, quizzes, scans, papers (questions written in Gradal), books, settings;
 - `books/<id>.pdf`: the textbooks the teacher added (id = first 8 bytes of the file's SHA-256, hex);
-- `scans/<id>.jpg`: each scanned sheet, straightened (4 px/mm grayscale);
+- `scans/<id>.jpg`: each scanned sheet, straightened (8 px/mm grayscale, from a full-resolution still);
 - `prints/<quizId>/`: the printable PDFs, a cache rebuilt when the quiz, its classes or the settings change.
 
 A backup is a zip of `store.json`, `books/` and `scans/` (Settings → «انسخ بياناتك احتياطًا»). AI keys stay in the

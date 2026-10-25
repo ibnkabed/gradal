@@ -57,11 +57,17 @@ struct ScanReviewView: View {
                 }
             }
         }
-        .onAppear {
-            if image == nil {
-                image = UIImage(contentsOfFile: store.imageURL(scanId).path)
-            }
-        }
+        .onAppear { renderGraded() }
+        .onChange(of: draft) { renderGraded() }
+    }
+
+    /// The paper as its correction copy (GradedPage), redrawn as the answers are edited.
+    private func renderGraded() {
+        guard let quiz = store.quiz(quizId), let scan = current(),
+              FileManager.default.fileExists(atPath: store.imageURL(scanId).path),
+              let cg = GradedPage.image(store.gradedPage(scan, quiz: quiz), bubbleRadiusMm: store.bubbleRadiusMm)
+        else { return }
+        image = UIImage(cgImage: cg)
     }
 
     private func form(_ quiz: Quiz, _ scan: Scan) -> some View {
@@ -75,8 +81,9 @@ struct ScanReviewView: View {
                         ScrollView([.horizontal, .vertical]) {
                             Image(uiImage: image)
                                 .resizable()
+                                .interpolation(.high)
                                 .scaledToFit()
-                                .frame(width: 900)
+                                .frame(width: 1100)
                         }
                         .navigationTitle("الورقة")
                     } label: {

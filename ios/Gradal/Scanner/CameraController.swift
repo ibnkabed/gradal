@@ -12,7 +12,7 @@ enum ScanEvent {
 
 /// Encodes a grayscale image as JPEG (the straightened review sheet).
 enum GrayJPEG {
-    static func encode(_ image: GrayImage, quality: CGFloat = 0.6) -> Data? {
+    static func encode(_ image: GrayImage, quality: CGFloat = 0.85) -> Data? {
         let data = Data(image.pixels) as CFData
         guard let provider = CGDataProvider(data: data),
               let cg = CGImage(width: image.width, height: image.height, bitsPerComponent: 8, bitsPerPixel: 8,
@@ -46,7 +46,10 @@ final class ScanGrids: @unchecked Sendable {
 /// Back camera → Y plane → SheetReader, on a serial queue that drops frames while busy.
 /// A paper is accepted when two consecutive reads agree; then nothing more is accepted until the
 /// markers have been gone for 0.7 s or a different paper (quiz code or student ID) shows up.
-final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
+/// The answers come from the video frame; the review copy from a full-resolution still taken right then
+/// (owner, 2026-10-25: the 1080p frame was too blurred to check a paper by), or from the frame if the still
+/// does not show the same paper.
+final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate, AVCapturePhotoCaptureDelegate {
     let session = AVCaptureSession()
     var onEvent: (@Sendable (ScanEvent) -> Void)?
 
@@ -63,6 +66,15 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private var locked = false
     private var lockedId = ""
     private var lastSeen: TimeInterval = 0
+    private let photoOutput = AVCapturePhotoOutput()
+    private var photoReady = false
+    private struct Pending {
+        let read: SheetRead
+        let frame: GrayImage
+        let corners: [CGPoint]
+        let size: CGSize
+    }
+    private var pending: Pending?
 
     init(layouts: SheetLayouts?) {
         self.layouts = layouts
@@ -114,6 +126,17 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         device = camera
         do {
             try camera.lockForConfiguration()
+            // a 1080p format whose stills are as large as the camera allows (the review copy)
+            let wide = camera.formats.filter {
+                let d = CMVideoFormatDescriptionGetDimensions($0.formatDescription)
+                return d.width == 1920 && d.height == 1080
+            }
+            func stillArea(_ f: AVCaptureDevice.Format) -> Int32 {
+                f.supportedMaxPhotoDimensions.map { $0.width * $0.height }.max() ?? 0
+            }
+            if let best = wide.max(by: { stillArea($0) < stillArea($1) }), stillArea(best) > stillArea(camera.activeFormat) {
+                camera.activeFormat = best
+            }
             if camera.isFocusModeSupported(.continuousAutoFocus) { camera.focusMode = .continuousAutoFocus }
             if camera.isAutoFocusRangeRestrictionSupported { camera.autoFocusRangeRestriction = .near }
             camera.unlockForConfiguration()
@@ -123,6 +146,42 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         output.alwaysDiscardsLateVideoFrames = true
         output.setSampleBufferDelegate(self, queue: videoQueue)
         if session.canAddOutput(output) { session.addOutput(output) }
+        if session.canAddOutput(photoOutput) {
+            session.addOutput(photoOutput)
+            if let largest = camera.activeFormat.supportedMaxPhotoDimensions.max(by: { $0.width * $0.height < $1.width * $1.height }) {
+                photoOutput.maxPhotoDimensions = largest
+            }
+            photoOutput.maxPhotoQualityPrioritization = .balanced
+            photoReady = photoOutput.availablePhotoPixelFormatTypes.contains(kCVPixelFormatType_420YpCbCr8BiPlanarFullRange)
+        }
+    }
+
+    private func takeStill() {
+        let settings = AVCapturePhotoSettings(format: [
+            kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
+        ])
+        settings.maxPhotoDimensions = photoOutput.maxPhotoDimensions
+        settings.photoQualityPrioritization = .balanced
+        photoOutput.capturePhoto(with: settings, delegate: self)
+    }
+
+    func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
+        let still = error == nil ? photo.pixelBuffer.flatMap { Self.luma($0) } : nil
+        videoQueue.async { [self] in finish(still) }
+    }
+
+    /// The accepted paper's review copy: from the still when it shows the same paper, else from the frame.
+    private func finish(_ still: GrayImage?) {
+        guard let p = pending, let layouts else { return }
+        pending = nil
+        var page: GrayImage?
+        if let still, let found = SheetReader.locate(still, layouts),
+           found.code == p.read.quizCode, found.version == p.read.version {
+            page = ReviewImage.warp(still, found.h, widthMm: layouts.page.widthMm, heightMm: layouts.page.heightMm)
+        }
+        let review = page ?? ReviewImage.warp(p.frame, p.read.homography, widthMm: layouts.page.widthMm,
+                                             heightMm: layouts.page.heightMm)
+        onEvent?(.accepted(read: p.read, jpeg: GrayJPEG.encode(review), corners: p.corners, size: p.size))
     }
 
     /// The luma plane as a tight grayscale image (bytesPerRow respected).
@@ -157,6 +216,7 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             return
         }
         lastSeen = now
+        if pending != nil { return }          // the still of the accepted paper is on its way
         let corners = located.corners.map { CGPoint(x: $0.x, y: $0.y) }
         // Answers are read only at the quiz's own positions (quiz.sheet from the PC).
         guard let grid = grids.grid(for: located.code),
@@ -181,9 +241,12 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
             previousKey = nil
             locked = true
             lockedId = paperId
-            let page = SheetReader.warpPage(gray, read.homography, layouts)
-            let jpeg = GrayJPEG.encode(page)
-            onEvent?(.accepted(read: read, jpeg: jpeg, corners: corners, size: size))
+            pending = Pending(read: read, frame: gray, corners: corners, size: size)
+            if photoReady {
+                takeStill()
+            } else {
+                finish(nil)
+            }
         } else {
             previousKey = key
             onEvent?(.seen(corners: corners, size: size, holding: false))

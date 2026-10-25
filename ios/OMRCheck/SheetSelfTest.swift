@@ -17,7 +17,11 @@ func sheetSelfTest(layouts: SheetLayouts, outDir: URL?) -> [String] {
         try? FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
     }
     var settings = Settings()
-    settings.schoolLines = ["المملكة العربية السعودية", "وزارة التعليم", "مدرسة الاختبار", ""]
+    settings.schoolLines = ["المملكة العربية السعودية", "وزارة التعليم", "الإدارة العامة للتعليم", ""]
+    settings.schoolName = "المدرسة النموذجية"
+    settings.teacher = "اسم المعلم"
+    // the README's sample sheet shows the ministry logo as the app prints it (CI runs from the repo root)
+    settings.logoPNG = try? Data(contentsOf: URL(fileURLWithPath: "ios/Gradal/Resources/moe-logo.png"))
     var wrotePersonal = false
 
     for language in ["ar", "en"] {

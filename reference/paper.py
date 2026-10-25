@@ -34,6 +34,14 @@ h2 { font-size: 11.5pt; margin: 4mm 0 2mm; padding: 1mm 2mm; background: #e6e6e6
 .opt b { margin-inline-end: 1.5mm }
 .opt.right { font-weight: 700; text-decoration: underline }
 .opt.right::after { content: " ✔" }
+table.head.ar { direction: ltr; font-size: 10pt }
+table.head.ar td { padding: 0.6mm 2mm; line-height: 1.35; font-weight: 700; direction: rtl }
+table.head.ar td.val { text-align: center; width: 19% }
+table.head.ar td.lab { text-align: right; width: 9.5%; white-space: nowrap }
+table.head.ar td.logo { text-align: center; width: 48.5% }
+table.head.ar td.logo img { max-height: 21mm; max-width: 45mm }
+table.head.ar td.min { text-align: center; width: 23% }
+.title { text-align: center; font-weight: 700; font-size: 12.5pt; margin: 0 0 3mm }
 """
 
 TEXT = {
@@ -49,7 +57,26 @@ def _e(s) -> str:
     return html.escape(str(s or ""))
 
 
+def arabic_header_html(settings: dict, quiz: dict) -> str:
+    """Arabic papers, as in the owner's Arabic letters: the ministry lines on the right, the logo in the middle,
+    «المدرسة / المادة / الصف / المعلم» with their values on the left; the test's name under it."""
+    ministry = [str(t).strip() for t in settings.get("schoolLines") or [] if str(t).strip()][:4]
+    h = quiz.get("header") or {}
+    labels = ["المدرسة:", "المادة:", "الصف:", "المعلم:"]
+    values = [settings.get("schoolName"), h.get("subject"), h.get("grade"), settings.get("teacher")]
+    logo = settings.get("logo") if str(settings.get("logo") or "").startswith("data:image/") else ""
+    rows = ""
+    for i in range(4):
+        rows += f'<tr><td class="val">{_e(values[i])}</td><td class="lab">{labels[i]}</td>'
+        if i == 0:
+            rows += f'<td class="logo" rowspan="4">{f"<img src={chr(34)}{logo}{chr(34)} alt={chr(34)}{chr(34)}>" if logo else ""}</td>'
+        rows += f'<td class="min">{_e(ministry[i] if i < len(ministry) else "")}</td></tr>'
+    return f'<table class="head ar">{rows}</table><div class="title">{_e(quiz.get("name"))}</div>'
+
+
 def header_html(settings: dict, quiz: dict) -> str:
+    if quiz.get("language") == "ar":
+        return arabic_header_html(settings, quiz)
     school, mine = sheets.header_lines(settings, quiz)
     logo = settings.get("logo") if str(settings.get("logo") or "").startswith("data:image/") else ""
     right = "<br>".join((f"<b>{_e(t)}</b>" if i == 0 else _e(t)) for i, t in enumerate(school))

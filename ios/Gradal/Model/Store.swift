@@ -364,21 +364,28 @@ final class Store: ObservableObject {
                 throw StoreError(message: "السؤال \(n + 1) ناقص: نص السؤال وأربعة بدائل")
             }
         }
-        paper.questions = paper.questions.filter { $0.kind == .mcq } + paper.questions.filter { $0.kind == .tf }
+        let parts = paper.request.parts
+        let names = ExamMaker.sectionNames[paper.request.language] ?? [:]
+        // in the parts' order; questions without a part (older drafts, or added by hand) follow, MCQ then true/false
+        var groups: [(name: String, questions: [Question])] = parts.enumerated().map { i, part in
+            (part.name, paper.questions.filter { $0.section == i })
+        }
+        for kind in [Question.Kind.mcq, .tf] {
+            let loose = paper.questions.filter { ($0.section == nil || $0.section! >= parts.count) && $0.kind == kind }
+            if !loose.isEmpty { groups.append((names[kind] ?? "", loose)) }
+        }
+        groups = groups.filter { !$0.questions.isEmpty }
+        paper.questions = groups.flatMap { $0.questions }
         let count = paper.questions.count
         guard count >= SheetGeometry.minQuestions, count <= SheetGeometry.maxQuestions else {
             throw StoreError(message: "عدد الأسئلة من \(SheetGeometry.minQuestions) إلى \(SheetGeometry.maxQuestions)")
         }
         let req = paper.request
-        let names = ExamMaker.sectionNames[req.language] ?? [:]
         var sections: [QuizSection] = []
         var start = 1
-        for kind in [Question.Kind.mcq, .tf] {
-            let n = paper.questions.filter { $0.kind == kind }.count
-            if n > 0 {
-                sections.append(QuizSection(name: names[kind] ?? "", from: start, to: start + n - 1))
-                start += n
-            }
+        for g in groups {
+            sections.append(QuizSection(name: g.name, from: start, to: start + g.questions.count - 1))
+            start += g.questions.count
         }
         let key = paper.questions.map(\.letter)
         let header = QuizHeader(subject: req.subject, title: req.name, grade: req.grade, extra: teacherLine(req.language))

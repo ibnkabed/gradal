@@ -237,14 +237,16 @@ struct Question: Codable, Hashable, Identifiable {
     var text: String
     var options: [String]         // four for mcq, empty for tf
     var answer: Int
+    var section: Int?             // index in the request's sections (nil in drafts made before sections)
 
-    enum CodingKeys: String, CodingKey { case id, kind, text, options, answer }
+    enum CodingKeys: String, CodingKey { case id, kind, text, options, answer, section }
 
-    init(kind: Kind, text: String, options: [String], answer: Int) {
+    init(kind: Kind, text: String, options: [String], answer: Int, section: Int? = nil) {
         self.kind = kind
         self.text = text
         self.options = options
         self.answer = answer
+        self.section = section
     }
 
     init(from decoder: Decoder) throws {
@@ -254,10 +256,28 @@ struct Question: Codable, Hashable, Identifiable {
         text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
         options = try c.decodeIfPresent([String].self, forKey: .options) ?? []
         answer = try c.decodeIfPresent(Int.self, forKey: .answer) ?? 0
+        section = try c.decodeIfPresent(Int.self, forKey: .section)
     }
 
     /// The letter on the answer sheet.
     var letter: String { Grading.letters[min(max(answer, 0), 3)] }
+}
+
+/// One part of the paper as the teacher names it («السؤال الأول: اختر الإجابة الصحيحة»), its kind and how many.
+struct PaperSection: Codable, Hashable, Identifiable {
+    var id: String = UUID().uuidString.lowercased()
+    var name: String
+    var kind: Question.Kind
+    var count: Int
+
+    /// The two usual parts, in the paper's language.
+    static func defaults(_ language: String) -> [PaperSection] {
+        language == "ar"
+            ? [PaperSection(name: "السؤال الأول: اختر الإجابة الصحيحة", kind: .mcq, count: 15),
+               PaperSection(name: "السؤال الثاني: ضع علامة صح أو خطأ", kind: .tf, count: 5)]
+            : [PaperSection(name: "Multiple Choice", kind: .mcq, count: 15),
+               PaperSection(name: "True or False", kind: .tf, count: 5)]
+    }
 }
 
 /// What the teacher asked the question writer for.
@@ -273,6 +293,15 @@ struct PaperRequest: Codable, Hashable {
     var mcq: Int
     var tf: Int
     var notes: String
+    var sections: [PaperSection]? = nil   // the paper's parts in order; nil = MCQ then true/false
+
+    /// The parts in order (the two usual ones for requests made before sections).
+    var parts: [PaperSection] {
+        if let sections, !sections.isEmpty { return sections }
+        let names = PaperSection.defaults(language)
+        return [PaperSection(name: names[0].name, kind: .mcq, count: mcq),
+                PaperSection(name: names[1].name, kind: .tf, count: tf)].filter { $0.count > 0 }
+    }
 }
 
 /// The questions of a test written in Gradal: a draft until the teacher approves it, then the quiz's paper.
@@ -296,18 +325,29 @@ struct Book: Codable, Identifiable, Hashable {
 
 struct Settings: Codable, Hashable {
     var schoolLines: [String] = ["المملكة العربية السعودية", "وزارة التعليم", "", ""]
+    var schoolName: String = ""
     var teacher: String = ""
     var logoPNG: Data?
+    var ministryLogo: Bool = true    // the Ministry of Education logo when no logo of the school's own is chosen
 
-    enum CodingKeys: String, CodingKey { case schoolLines, teacher, logoPNG }
+    enum CodingKeys: String, CodingKey { case schoolLines, schoolName, teacher, logoPNG, ministryLogo }
 
     init() {}
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         schoolLines = try c.decodeIfPresent([String].self, forKey: .schoolLines) ?? Settings().schoolLines
+        schoolName = try c.decodeIfPresent(String.self, forKey: .schoolName) ?? ""
         teacher = try c.decodeIfPresent(String.self, forKey: .teacher) ?? ""
         logoPNG = try c.decodeIfPresent(Data.self, forKey: .logoPNG)
+        ministryLogo = try c.decodeIfPresent(Bool.self, forKey: .ministryLogo) ?? true
+    }
+
+    /// The logo printed in the header: the school's own, else the ministry's (bundled), else none.
+    var headerLogo: Data? {
+        if let logoPNG, !logoPNG.isEmpty { return logoPNG }
+        guard ministryLogo, let url = Bundle.main.url(forResource: "moe-logo", withExtension: "png") else { return nil }
+        return try? Data(contentsOf: url)
     }
 
     var lines: [String] { schoolLines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }

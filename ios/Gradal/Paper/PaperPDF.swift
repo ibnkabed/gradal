@@ -32,6 +32,14 @@ enum PaperPDF {
     .opt b { margin-inline-end: 1.5mm }
     .opt.right { font-weight: 700; text-decoration: underline }
     .opt.right::after { content: " ✔" }
+    table.head.ar { direction: ltr; font-size: 10pt }
+    table.head.ar td { padding: 0.6mm 2mm; line-height: 1.35; font-weight: 700; direction: rtl }
+    table.head.ar td.val { text-align: center; width: 19% }
+    table.head.ar td.lab { text-align: right; width: 9.5%; white-space: nowrap }
+    table.head.ar td.logo { text-align: center; width: 48.5% }
+    table.head.ar td.logo img { max-height: 21mm; max-width: 45mm }
+    table.head.ar td.min { text-align: center; width: 23% }
+    .title { text-align: center; font-weight: 700; font-size: 12.5pt; margin: 0 0 3mm }
     """
 
     private struct Texts {
@@ -106,16 +114,36 @@ enum PaperPDF {
     /// The school lines on the right, the logo in the middle, the quiz lines on the left (always right to left,
     /// like the answer sheet).
     static func headerHTML(settings: Settings, quiz: Quiz) -> String {
+        if quiz.isArabic { return arabicHeaderHTML(settings: settings, quiz: quiz) }
         let school = Array(settings.lines.prefix(4))
         let mine = Array(quiz.header.lines.prefix(4))
         let right = school.enumerated().map { i, t in i == 0 ? "<b>\(escape(t))</b>" : escape(t) }.joined(separator: "<br>")
         let left = mine.enumerated().map { i, t in i == 0 ? "<b>\(escape(t))</b>" : escape(t) }.joined(separator: "<br>")
         var mid = ""
-        if let logo = settings.logoPNG, !logo.isEmpty {
+        if let logo = settings.headerLogo {
             mid = "<img src=\"data:image/png;base64,\(logo.base64EncodedString())\" alt=\"\">"
         }
         return "<table class=\"head\" dir=\"rtl\"><tr><td style=\"text-align:right\">\(right)</td><td class=\"mid\">\(mid)</td>"
             + "<td style=\"text-align:left\" dir=\"auto\">\(left)</td></tr></table>"
+    }
+
+    /// The Arabic papers' header, as in the owner's Arabic letters: the ministry lines on the right, the logo in the
+    /// middle, «المدرسة / المادة / الصف / المعلم» with their values on the left; the test's name under it.
+    static func arabicHeaderHTML(settings: Settings, quiz: Quiz) -> String {
+        let ministry = Array(settings.lines.prefix(4))
+        let labels = ["المدرسة:", "المادة:", "الصف:", "المعلم:"]
+        let values = [settings.schoolName, quiz.header.subject, quiz.header.grade, settings.teacher]
+        var logo = ""
+        if let data = settings.headerLogo {
+            logo = "<img src=\"data:image/png;base64,\(data.base64EncodedString())\" alt=\"\">"
+        }
+        var rows = ""
+        for i in 0..<4 {
+            rows += "<tr><td class=\"val\">\(escape(values[i]))</td><td class=\"lab\">\(labels[i])</td>"
+            if i == 0 { rows += "<td class=\"logo\" rowspan=\"4\">\(logo)</td>" }
+            rows += "<td class=\"min\">\(escape(i < ministry.count ? ministry[i] : ""))</td></tr>"
+        }
+        return "<table class=\"head ar\">\(rows)</table><div class=\"title\">\(escape(quiz.name))</div>"
     }
 
     static func html(quiz: Quiz, paper: Paper, settings: Settings, mark: Bool) -> String {

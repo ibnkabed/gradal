@@ -37,7 +37,11 @@ struct SettingsView: View {
                     ForEach(0..<4, id: \.self) { i in
                         TextField("سطر \(i + 1) من رأس الورقة", text: lineBinding(i))
                     }
+                    TextField("اسم المدرسة", text: $settings.schoolName)
                     TextField("اسم المعلم (اختياري)", text: $settings.teacher)
+                    if settings.logoPNG == nil {
+                        Toggle("شعار وزارة التعليم", isOn: $settings.ministryLogo)
+                    }
                     HStack {
                         if let data = settings.logoPNG, let img = UIImage(data: data) {
                             Image(uiImage: img).resizable().scaledToFit().frame(height: 40)
@@ -57,7 +61,7 @@ struct SettingsView: View {
                 } header: {
                     Text("رأس الورقة")
                 } footer: {
-                    Text("يُطبع أعلى ورقة الأسئلة وورقة الإجابة: أسطر المدرسة يمينًا، وبيانات الاختبار يسارًا، والشعار في الوسط.")
+                    Text("يُطبع أعلى ورقة الأسئلة وورقة الإجابة. في الاختبار العربي: أسطر الوزارة يمينًا، والشعار في الوسط، والمدرسة والمادة والصف والمعلم يسارًا. وفي الإنجليزي: الأسطر يمينًا وبيانات الاختبار يسارًا.")
                 }
 
                 Section {

@@ -90,7 +90,7 @@ enum AnswerSheetPDF {
         let pages = people.isEmpty ? [SheetPerson(studentName: "", gradalId: "", className: "")] : people
         let sheet = quiz.sheet ?? (try? SheetGeometry.compute(questionCount: quiz.questionCount, sections: quiz.sections,
                                                                rtl: quiz.isArabic, layout: layout))
-        let logo = settings.logoPNG.flatMap(loadImage)
+        let logo = settings.headerLogo.flatMap { loadImage($0) }
         for person in pages {
             ctx.beginPDFPage(nil)
             ctx.saveGState()
@@ -263,6 +263,10 @@ enum AnswerSheetPDF {
     /// the school's logo (if any) in the middle.
     private static func drawHeader(_ ctx: CGContext, _ box: [Double], settings: Settings, quiz: Quiz, logo: CGImage?) {
         guard box.count >= 4 else { return }
+        if quiz.isArabic {
+            drawArabicHeader(ctx, box, settings: settings, quiz: quiz, logo: logo)
+            return
+        }
         let x0 = box[0], y0 = box[1], x1 = box[2], y1 = box[3]
         let h = y1 - y0
         strokeRect(ctx, x0, y0, x1 - x0, h, ink, 0.35)
@@ -278,6 +282,37 @@ enum AnswerSheetPDF {
         }
         if let logo {
             drawImageFit(ctx, logo, (x0 + x1) / 2 - 15, y0 + 1.5, 30, h - 3)
+        }
+    }
+
+    /// The Arabic header (PaperPDF.arabicHeaderHTML on paper): columns as in the owner's letters (Word grid
+    /// 1971 / 990 / 5070 / 2415 twips): values, labels, the logo, the ministry lines; four rows.
+    private static func drawArabicHeader(_ ctx: CGContext, _ box: [Double], settings: Settings, quiz: Quiz, logo: CGImage?) {
+        let x0 = box[0], y0 = box[1], x1 = box[2], y1 = box[3]
+        let w = x1 - x0, h = y1 - y0
+        strokeRect(ctx, x0, y0, w, h, ink, 0.35)
+        let grid = [1971.0, 990.0, 5070.0, 2415.0]
+        let total = grid.reduce(0, +)
+        let valX1 = x0 + w * grid[0] / total
+        let labX1 = valX1 + w * grid[1] / total
+        let logoX1 = labX1 + w * grid[2] / total
+        let ministry = Array(settings.lines.prefix(4))
+        let labels = ["المدرسة:", "المادة:", "الصف:", "المعلم:"]
+        let values = [settings.schoolName, quiz.header.subject, quiz.header.grade, settings.teacher]
+        let pitch = (h - 2.0) / 4
+        for i in 0..<4 {
+            let y = y0 + 1.0 + pitch * (Double(i) + 0.5)
+            let value = values[i].trimmingCharacters(in: .whitespaces)
+            if !value.isEmpty {
+                drawText(ctx, prefix(value, 30), at: pt((x0 + valX1) / 2, y), sizeMm: 2.7, anchor: .middle, weight: .bold, vCenter: true)
+            }
+            drawText(ctx, labels[i], at: pt(labX1 - 1.2, y), sizeMm: 2.7, anchor: .end, weight: .bold, vCenter: true)
+            if i < ministry.count {
+                drawText(ctx, ministry[i], at: pt((logoX1 + x1) / 2, y), sizeMm: 2.7, anchor: .middle, weight: .bold, vCenter: true)
+            }
+        }
+        if let logo {
+            drawImageFit(ctx, logo, (labX1 + logoX1) / 2 - 17, y0 + 1.0, 34, h - 2)
         }
     }
 

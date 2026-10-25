@@ -15,8 +15,8 @@ struct NewFromBookView: View {
     @State private var bookId = ""
     @State private var pageFrom = 1
     @State private var pageTo = 10
-    @State private var mcq = 15
-    @State private var tf = 5
+    @State private var parts: [PaperSection] = PaperSection.defaults("ar")
+    @State private var partsEdited = false
     @State private var classIds: [String] = []
     @State private var notes = ""
     @State private var picking = false
@@ -70,9 +70,34 @@ struct NewFromBookView: View {
                     }
                 }
 
-                Section("عدد الأسئلة") {
-                    Stepper("اختيار من متعدد: \(mcq)", value: $mcq, in: 0...60)
-                    Stepper("صح أو خطأ: \(tf)", value: $tf, in: 0...60)
+                Section {
+                    ForEach($parts) { $part in
+                        VStack(alignment: .leading, spacing: 6) {
+                            TextField("اسم القسم", text: $part.name)
+                                .font(.body.weight(.semibold))
+                                .onChange(of: part.name) { _, _ in partsEdited = true }
+                            Picker("النوع", selection: $part.kind) {
+                                Text("اختيار من متعدد").tag(Question.Kind.mcq)
+                                Text("صح أو خطأ").tag(Question.Kind.tf)
+                            }
+                            .pickerStyle(.segmented)
+                            Stepper("عدد الأسئلة: \(part.count)", value: $part.count, in: 1...60)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .onDelete { parts.remove(atOffsets: $0) }
+                    .onMove { parts.move(fromOffsets: $0, toOffset: $1) }
+                    Button {
+                        parts.append(PaperSection(name: language == "ar" ? "السؤال \(ordinal(parts.count + 1))" : "Part \(parts.count + 1)",
+                                                  kind: .mcq, count: 5))
+                        partsEdited = true
+                    } label: {
+                        Label("أضف قسمًا", systemImage: "plus")
+                    }
+                } header: {
+                    Text("الأقسام: " + countWord(parts.reduce(0) { $0 + $1.count }, questionsForms))
+                } footer: {
+                    Text("سمِّ كل قسم كما تريده في الورقة، واختر نوعه وعدد أسئلته. واسحب القسم لحذفه، والمجموع من \(SheetGeometry.minQuestions) إلى \(SheetGeometry.maxQuestions).")
                 }
 
                 Section("الفصول") {
@@ -121,14 +146,38 @@ struct NewFromBookView: View {
                 }
             }
             .interactiveDismissDisabled(running)
+            .onChange(of: language) { _, lang in
+                if !partsEdited { parts = PaperSection.defaults(lang) }
+            }
         }
+    }
+
+    /// Arabic ordinals for new parts' default names.
+    private func ordinal(_ n: Int) -> String {
+        let words = ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس", "السابع", "الثامن", "التاسع", "العاشر"]
+        return n <= words.count ? words[n - 1] : String(n)
+    }
+
+    /// The written questions (MCQ first, then true/false) dealt to the parts in the paper's order.
+    static func assign(_ questions: [Question], to parts: [PaperSection]) -> [Question] {
+        var pools: [Question.Kind: [Question]] = [.mcq: questions.filter { $0.kind == .mcq }, .tf: questions.filter { $0.kind == .tf }]
+        var out: [Question] = []
+        for (i, part) in parts.enumerated() {
+            let take = Array((pools[part.kind] ?? []).prefix(part.count))
+            pools[part.kind] = Array((pools[part.kind] ?? []).dropFirst(take.count))
+            out += take.map { q in var q = q; q.section = i; return q }
+        }
+        return out
     }
 
     private func start() {
         guard let book else { return }
         let request = PaperRequest(name: name.trimmingCharacters(in: .whitespaces), subject: subject, grade: grade,
                                    language: language, classIds: classIds, bookId: book.id,
-                                   pageFrom: pageFrom, pageTo: pageTo, mcq: mcq, tf: tf, notes: notes)
+                                   pageFrom: pageFrom, pageTo: pageTo,
+                                   mcq: parts.filter { $0.kind == .mcq }.reduce(0) { $0 + $1.count },
+                                   tf: parts.filter { $0.kind == .tf }.reduce(0) { $0 + $1.count },
+                                   notes: notes, sections: parts)
         error = nil
         lines = []
         do {
@@ -144,7 +193,8 @@ struct NewFromBookView: View {
                 let result = try await ExamMaker.write(request, bookURL: store.bookURL(book.id), ai: ai) { line in
                     lines.append(line)
                 }
-                let paper = Paper(createdAt: Stamp.now(), request: request, questions: result.questions,
+                let paper = Paper(createdAt: Stamp.now(), request: request,
+                                  questions: Self.assign(result.questions, to: request.parts),
                                   providers: result.providers, quizId: nil)
                 store.saveDraft(paper)
                 onDone(paper.id)

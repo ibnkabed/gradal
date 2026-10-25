@@ -9,8 +9,21 @@ enum Printing {
         info.jobName = title
         let controller = UIPrintInteractionController.shared
         controller.printInfo = info
+        controller.delegate = A4Paper.shared
         controller.printingItem = url
         _ = controller.present(animated: true)
+    }
+}
+
+/// A4 always (owner, 2026-10-25): left to itself AirPrint printed the A4 sheet on the printer's default paper
+/// (Letter), which cut off the bottom ~27 mm with the two bottom corner markers, so the scanner never found the sheet.
+final class A4Paper: NSObject, UIPrintInteractionControllerDelegate {
+    static let shared = A4Paper()
+    static let size = CGSize(width: 595.276, height: 841.89)
+
+    func printInteractionController(_ printInteractionController: UIPrintInteractionController,
+                                    choosePaper paperList: [UIPrintPaper]) -> UIPrintPaper {
+        UIPrintPaper.bestPaper(forPageSize: Self.size, withPapersFrom: paperList)
     }
 }
 

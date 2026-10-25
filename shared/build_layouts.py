@@ -25,13 +25,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-LAYOUT_VERSION = 4
+LAYOUT_VERSION = 5   # 5: bottom markers raised 13 mm — home printers clip the last ~10 mm of A4
 PAGE = {"widthMm": 210.0, "heightMm": 297.0}
 
 HEADER_BOX = [12.45, 8.0, 197.55, 24.0]       # x0, y0, x1, y1 of the school header
 
 MARKER_SIZE = 7.0
-FRAME_TOP, FRAME_BOTTOM, FRAME_LEFT, FRAME_RIGHT = 34.0, 285.0, 14.0, 196.0
+FRAME_TOP, FRAME_BOTTOM, FRAME_LEFT, FRAME_RIGHT = 34.0, 272.0, 14.0, 196.0   # bottom markers end 21.5 mm above the edge
 MARKERS = [[FRAME_LEFT, FRAME_TOP], [FRAME_RIGHT, FRAME_TOP],
            [FRAME_RIGHT, FRAME_BOTTOM], [FRAME_LEFT, FRAME_BOTTOM]]          # TL, TR, BR, BL
 ORIENTATION = {"center": [26.0, FRAME_TOP], "sizeMm": 3.5}

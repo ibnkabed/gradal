@@ -6,7 +6,7 @@ import UIKit
 @MainActor
 final class ScannerModel: ObservableObject {
     @Published var outline: [CGPoint] = []
-    @Published var status = "وجّه الكاميرا إلى الورقة كاملة بزواياها الأربع"
+    @Published var status = "وجّه الكاميرا إلى الورقة حتى تظهر مربعاتها السوداء الأربعة في الزوايا. تُصحَّح وتُحفظ وحدها، بلا زر"
     @Published var torchOn = false
     @Published var lastCard: ResultCard?
     @Published var count = 0
@@ -72,7 +72,7 @@ final class ScannerModel: ObservableObject {
         case .nothing:
             outline = []
             status = lastCard == nil
-                ? "وجّه الكاميرا إلى الورقة كاملة بزواياها الأربع"
+                ? "وجّه الكاميرا إلى الورقة حتى تظهر مربعاتها السوداء الأربعة في الزوايا. تُصحَّح وتُحفظ وحدها، بلا زر"
                 : "ضع الورقة التالية"
         case let .blocked(code, known, corners, size):
             outline = convert(corners, size)

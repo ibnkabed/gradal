@@ -95,6 +95,25 @@ final class Store: ObservableObject {
         } else {
             db = StoreFile()
         }
+        upgradeSheets()
+    }
+
+    /// Quizzes saved with an older sheet layout get their positions again (their printouts are made anew).
+    private func upgradeSheets() {
+        guard let layout = LayoutStore.shared else { return }
+        var changed = false
+        for i in db.quizzes.indices where !db.quizzes[i].deleted && db.quizzes[i].sheet?.version != SheetGeometry.version {
+            let q = db.quizzes[i]
+            if let sheet = try? SheetGeometry.compute(questionCount: q.questionCount, sections: q.sections,
+                                                      rtl: q.isArabic, layout: layout) {
+                db.quizzes[i].sheet = sheet
+                changed = true
+            }
+        }
+        if changed {
+            clearAllPrints()
+            save()
+        }
     }
 
     private func save() {

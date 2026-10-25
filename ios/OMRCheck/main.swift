@@ -213,6 +213,38 @@ func importSelfTest() -> [String] {
     } else {
         failures.append("cannot make test dates")
     }
+
+    // 9. A class list PDF's text (Noor's report layout) and a provider's JSON; one student added by hand.
+    let pdfText = """
+    المملكة العربية السعودية
+    وزارة التعليم
+    تقرير الطلاب حسب الفصل
+    الفصل: أول متوسط 1
+    م رقم الهوية اسم الطالب
+    1 1133582856 أحمد محمد سعد العتيبي
+    2 1133582857 خالد سعد علي القحطاني
+    الفصل: أول متوسط 2
+    1 1144582856 فهد ناصر الدوسري
+    صفحة 1 من 1
+    """
+    do {
+        let cls = try StudentsText.fromText(pdfText, className: "")
+        expect(cls.map(\.name) == ["أول متوسط 1", "أول متوسط 2"], "pdf text classes \(cls.map(\.name))")
+        expect(cls.first?.students.map(\.name) == ["أحمد محمد سعد العتيبي", "خالد سعد علي القحطاني"],
+               "pdf text names \(cls.first?.students.map(\.name) ?? [])")
+        expect(cls.first?.students.first?.nationalId == "1133582856", "pdf text national id")
+        let json: [String: Any] = ["classes": [["name": "", "students": [["name": "سعد ناصر", "nationalId": "123"]]]]]
+        let fromAI = try StudentsText.fromJSON(json, className: "ثاني 1")
+        expect(fromAI.first?.name == "ثاني 1" && fromAI.first?.students.first?.nationalId == "", "ai json")
+        var c: [SchoolClass] = [], s: [Student] = []
+        _ = try Roster.merge(cls, classes: &c, students: &s)
+        let added = try Roster.addStudent(name: "ماجد عمر", className: "أول متوسط 1", classes: &c, students: &s)
+        expect(added.gradalId == "103" && s.filter(\.active).count == 4, "addStudent \(added.gradalId)")
+        let fresh = try Roster.addStudent(name: "ريان", className: "ثالث متوسط 4", classes: &c, students: &s)
+        expect(fresh.gradalId == "301", "addStudent new class \(fresh.gradalId)")
+    } catch {
+        failures.append("students text: \(message(error))")
+    }
     return failures
 }
 

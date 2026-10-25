@@ -125,6 +125,37 @@ enum Roster {
         return summary
     }
 
+    /// One student added by hand to a class (created when new), at the end of its list; nobody else changes.
+    @discardableResult
+    static func addStudent(name rawName: String, className rawClass: String, classes: inout [SchoolClass],
+                           students: inout [Student]) throws -> Student {
+        let name = cleanName(rawName)
+        let cname = cleanName(rawClass)
+        if name.isEmpty { throw RosterError(message: "اكتب اسم الطالب") }
+        if cname.isEmpty { throw RosterError(message: "اختر الفصل أو اكتب اسمه") }
+        let key = normalise(cname)
+        if classes.firstIndex(where: { isCurrent($0) && normalise($0.name) == key }) == nil {
+            _ = try merge([ImportedClass(name: cname, students: [])], classes: &classes, students: &students)
+        }
+        guard let cls = classes.first(where: { isCurrent($0) && normalise($0.name) == key }) else {
+            throw RosterError(message: "الفصل غير موجود")
+        }
+        let mine = students.filter { isCurrent($0) && $0.classIds.contains(cls.id) }
+        if let same = mine.first(where: { normalise($0.name) == normalise(name) }) {
+            throw RosterError(message: "\(same.name) موجود في الفصل برقم \(same.gradalId)")
+        }
+        let digit = String(cls.prefix)
+        let used = Set(students.filter { $0.archived == nil && $0.gradalId.count == 3 && $0.gradalId.hasPrefix(digit) }
+            .compactMap { Int($0.gradalId.dropFirst()) })
+        guard let serial = (1...99).first(where: { !used.contains($0) }) else {
+            throw RosterError(message: "الفصل \(cls.name) تجاوز 99 طالبًا")
+        }
+        let student = Student(classId: cls.id, name: name, gradalId: digit + (serial < 10 ? "0" : "") + String(serial),
+                              nationalId: nil, order: (mine.map(\.order).max() ?? 0) + 1)
+        students.append(student)
+        return student
+    }
+
     /// «2025-2026 — 2026-09-15»: the school year being closed and the day. Up to September (a new year starting)
     /// that is the year just ended; from October (a new semester) the running one. Gregorian, ASCII digits.
     static func yearLabel(_ date: Date) -> String {

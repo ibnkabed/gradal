@@ -438,6 +438,23 @@ final class Store: ObservableObject {
         try applyRoster(StudentsImport.pasted(text, className: className))
     }
 
+    /// A class list printed to PDF: read by the linked AI (or by Gradal from its text), then merged like Excel.
+    func importStudentsPDF(_ data: Data, className: String, ai: AIClient) async throws -> [RosterSummary] {
+        try applyRoster(await StudentsPDF.read(data, className: className, ai: ai))
+    }
+
+    /// One student by hand; the class is created when new.
+    func addStudent(name: String, className: String) throws -> Student {
+        var classes = db.classes, students = db.students
+        let student = try Roster.addStudent(name: name, className: className, classes: &classes, students: &students)
+        db.classes = classes
+        db.students = students
+        relinkUnknown()
+        clearAllPrints()
+        save()
+        return student
+    }
+
     private func applyRoster(_ imported: [ImportedClass]) throws -> [RosterSummary] {
         var classes = db.classes, students = db.students
         let summary = try Roster.merge(imported, classes: &classes, students: &students)

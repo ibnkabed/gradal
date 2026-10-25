@@ -61,8 +61,10 @@ earned on each question; a student with no scan keeps an empty row.
 
 ## Class lists
 
-From the teacher's Excel export of a class in Noor (xlsx, or the HTML table Noor saves as .xls), a CSV, or pasted
-names. Classes match by name (new class → next free prefix); students by national ID, else by normalised name
+From the teacher's Excel export of a class in Noor (xlsx, or the HTML table Noor saves as .xls), a PDF report from
+Noor (read by Gemini when linked, else by another linked provider from its text, else by Gradal's own text reader:
+class lines «الفصل: …» start a class, lines of three to six Arabic words are names), a CSV, pasted names, or one
+student added by hand (next free serial in his class, nobody else changes). Classes match by name (new class → next free prefix); students by national ID, else by normalised name
 within the class (no spaces, أ/إ/آ→ا, ة→ه, ى→ي); a new student → the next free serial; everyone's order refreshed;
 students missing from a re-import of their class become inactive. **A new school year** archives every current
 class and its students (kept for the old results); prefixes and serials are free again.

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gradal</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand"><img src="/app-icon.png" alt=""><b>Gradal</b><span>اختبارات تُصحَّح بالجوال</span></div>
+    <nav id="tabs">
+      <button type="button" data-tab="quizzes" class="active">الاختبارات</button>
+      <button type="button" data-tab="students">الطلاب</button>
+      <button type="button" data-tab="settings">الإعدادات</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- الاختبارات -->
+    <section id="tab-quizzes" class="tab active">
+      <div id="quizHome">
+        <div class="actions">
+          <button class="btn big" type="button" id="newFromBook">اختبار جديد من كتاب</button>
+          <button class="btn big ghost" type="button" id="newManual">اختبار بمفتاح جاهز</button>
+        </div>
+        <div id="aiHint" class="hint box" hidden>لكتابة الأسئلة من كتاب اربط مزوّد ذكاء اصطناعي مجانيًا من <a href="#" data-goto="settings">الإعدادات</a>.</div>
+        <div id="draftsBox" hidden>
+          <h2>مسودات بانتظار مراجعتك</h2>
+          <div id="drafts" class="cards"></div>
+        </div>
+        <h2>اختباراتي</h2>
+        <div id="quizList" class="cards"></div>
+      </div>
+
+      <!-- اختبار جديد من كتاب -->
+      <div id="bookForm" class="panel" hidden>
+        <div class="panel-head"><h2>اختبار جديد من كتاب</h2><button class="btn ghost small" type="button" data-back>رجوع</button></div>
+        <div class="grid two">
+          <label>اسم الاختبار<input id="bName" placeholder="مثال: اختبار الفترة الأولى"></label>
+          <label>المادة<input id="bSubject" placeholder="مثال: العلوم"></label>
+          <label>الصف<input id="bGrade" placeholder="مثال: الأول المتوسط"></label>
+          <label>لغة الأسئلة<select id="bLang"><option value="ar">العربية</option><option value="en">English</option></select></label>
+        </div>
+        <b class="label">الكتاب</b>
+        <div class="row">
+          <select id="bBook"></select>
+          <label class="btn ghost small file">أضف كتاب PDF<input type="file" id="bUpload" accept="application/pdf" hidden></label>
+          <span class="hint" id="bBookInfo"></span>
+        </div>
+        <div class="grid four">
+          <label>من صفحة<input id="bFrom" type="number" min="1" value="1"></label>
+          <label>إلى صفحة<input id="bTo" type="number" min="1" value="10"></label>
+          <label>اختيار من متعدد<input id="bMcq" type="number" min="0" value="15"></label>
+          <label>صح أو خطأ<input id="bTf" type="number" min="0" value="5"></label>
+        </div>
+        <p class="hint">أرقام الصفحات كما في ملف PDF نفسه (الصفحة الأولى في الملف = 1)، وثلاثون صفحة على الأكثر.</p>
+        <b class="label">الفصول</b>
+        <div class="chips" id="bClasses"></div>
+        <label>ملاحظة للكاتب (اختياري)<input id="bNotes" placeholder="مثال: ركّز على المفاهيم لا على الأرقام"></label>
+        <div class="row"><button class="btn big" type="button" id="bStart">اكتب الأسئلة</button></div>
+        <div id="bProgress" class="progress" hidden></div>
+      </div>
+
+      <!-- مراجعة الأسئلة -->
+      <div id="review" class="panel" hidden>
+        <div class="panel-head"><h2 id="rTitle">راجع الأسئلة</h2><button class="btn ghost small" type="button" data-back>رجوع</button></div>
+        <p class="hint">عدّل ما تشاء: النص، والبدائل، والإجابة الصحيحة. ثم اعتمد الاختبار لتُجهَّز أوراقه.</p>
+        <div class="grid three">
+          <label>اسم الاختبار<input id="rName"></label>
+          <label>المادة<input id="rSubject"></label>
+          <label>الصف<input id="rGrade"></label>
+        </div>
+        <div class="chips" id="rClasses"></div>
+        <div id="rQuestions"></div>
+        <div class="row">
+          <button class="btn ghost small" type="button" id="rAddMcq">+ سؤال اختيار</button>
+          <button class="btn ghost small" type="button" id="rAddTf">+ صح أو خطأ</button>
+          <span class="spacer"></span>
+          <span class="hint" id="rCount"></span>
+        </div>
+        <div class="row sticky">
+          <button class="btn ghost" type="button" id="rSave">احفظ المسودة</button>
+          <button class="btn danger ghost" type="button" id="rDelete">احذف المسودة</button>
+          <span class="spacer"></span>
+          <button class="btn big" type="button" id="rApprove">اعتمد الاختبار</button>
+        </div>
+      </div>
+
+      <!-- اختبار بمفتاح جاهز -->
+      <div id="manual" class="panel" hidden>
+        <div class="panel-head"><h2>اختبار بمفتاح جاهز</h2><button class="btn ghost small" type="button" data-back>رجوع</button></div>
+        <p class="hint">لاختبار أعددته بنفسك: يطبع Gradal ورقة الإجابة، ويصحح بالمفتاح الذي تدخله هنا.</p>
+        <div class="grid four">
+          <label>اسم الاختبار<input id="mName"></label>
+          <label>المادة<input id="mSubject"></label>
+          <label>لغة ورقة الإجابة<select id="mLang"><option value="ar">العربية (أ ب ج د)</option><option value="en">English (A B C D)</option></select></label>
+          <label>عدد الأسئلة<input id="mCount" type="number" value="20"></label>
+        </div>
+        <div class="chips" id="mClasses"></div>
+        <b class="label">مفتاح الإجابة</b>
+        <div id="mKey" class="keygrid"></div>
+        <div class="row"><button class="btn big" type="button" id="mSave">احفظ الاختبار</button></div>
+      </div>
+
+      <!-- صفحة الاختبار -->
+      <div id="quizPage" class="panel" hidden>
+        <div class="panel-head"><h2 id="qTitle"></h2><button class="btn ghost small" type="button" data-back>رجوع</button></div>
+        <div class="meta" id="qMeta"></div>
+        <h3>الأوراق</h3>
+        <p class="hint">افتح الورقة ثم اطبعها (A4، المقياس 100٪). وتصل الأوراق نفسها إلى الجوال لتطبعها منه في المدرسة.</p>
+        <div id="qFiles" class="files"></div>
+        <h3>النتائج</h3>
+        <div id="qStats" class="stats"></div>
+        <div class="row">
+          <a class="btn ghost small" id="qRecord" href="#">نزّل السجل (Excel)</a>
+          <button class="btn ghost small" type="button" id="qRefresh">حدّث</button>
+        </div>
+        <div class="scroll" id="qTable"><table class="grid-table"><thead><tr><th>الرقم</th><th>الطالب</th><th>الدرجة</th><th>٪</th><th></th></tr></thead>
+          <tbody id="qRows"></tbody></table></div>
+        <details id="qItemsBox"><summary>تحليل الأسئلة</summary><div id="qItems" class="items"></div></details>
+        <div class="row">
+          <button class="btn ghost small" type="button" id="qEdit">عدّل الأسئلة أو المفتاح</button>
+          <span class="spacer"></span>
+          <button class="btn danger ghost small" type="button" id="qDelete">احذف الاختبار</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- الطلاب -->
+    <section id="tab-students" class="tab">
+      <div class="grid two">
+        <div class="box">
+          <h2>استيراد من نور</h2>
+          <p class="hint">صدّر قائمة طلاب الفصل من نور ملف Excel، ثم اختره هنا. إن لم يذكر الملف اسم الفصل فاكتبه.</p>
+          <label>اسم الفصل (إن لم يكن في الملف)<input id="iClass" placeholder="مثال: أول متوسط 1"></label>
+          <div class="row"><label class="btn file">اختر الملف<input type="file" id="iFile" accept=".xlsx,.xls,.csv,.html,.htm,.txt" hidden></label></div>
+        </div>
+        <div class="box">
+          <h2>أو الصق الأسماء</h2>
+          <label>اسم الفصل<input id="pClass"></label>
+          <textarea id="pNames" rows="6" placeholder="اسم في كل سطر"></textarea>
+          <div class="row"><button class="btn" type="button" id="pAdd">أضف</button></div>
+        </div>
+      </div>
+      <p class="hint">لكل طالب رقم من ثلاث خانات يُطبع مظللًا في ورقته: الخانة الأولى رقم الفصل، والخانتان الباقيتان ترتيبه. والفصول تسعة على الأكثر في السنة الواحدة.</p>
+      <div id="classList"></div>
+      <div class="box danger-box">
+        <h2>سنة أو فصل دراسي جديد</h2>
+        <p class="hint">تُنقل الفصول الحالية وطلابها إلى الأرشيف (تبقى أسماؤهم في النتائج القديمة)، ثم تستورد قوائم السنة الجديدة.</p>
+        <button class="btn danger ghost" type="button" id="newYear">ابدأ سنة جديدة</button>
+      </div>
+    </section>
+
+    <!-- الإعدادات -->
+    <section id="tab-settings" class="tab">
+      <div class="box">
+        <h2>الذكاء الاصطناعي</h2>
+        <p class="hint">يكتب الأسئلة من كتابك. اربط مزوّدًا واحدًا على الأقل: افتح صفحة المفتاح، وأنشئ مفتاحًا مجانيًا، ثم الصقه هنا. يكفي واحد، وربط اثنين يجعل الثاني يراجع ما كتبه الأول. المفاتيح تبقى في جهازك.</p>
+        <div id="aiList" class="providers"></div>
+      </div>
+      <div class="box">
+        <h2>الجوال</h2>
+        <ol class="steps">
+          <li>ثبّت تطبيق Gradal على الآيفون.</li>
+          <li>اجعل الجوال والكمبيوتر على الشبكة نفسها، وأبقِ هذه النافذة مفتوحة.</li>
+          <li>في الجوال: الإعدادات ← «اقتران»، ثم اكتب الرمز الذي يظهر هنا.</li>
+        </ol>
+        <div id="pinBox" class="pin" hidden></div>
+        <p class="hint" id="lanInfo"></p>
+        <div id="devices"></div>
+      </div>
+      <div class="box">
+        <h2>رأس الورقة</h2>
+        <p class="hint">يُطبع أعلى ورقة الأسئلة وورقة الإجابة: أسطر المدرسة يمينًا، وبيانات الاختبار يسارًا، والشعار في الوسط.</p>
+        <div class="grid two">
+          <label>السطر الأول<input class="sLine"></label>
+          <label>السطر الثاني<input class="sLine"></label>
+          <label>السطر الثالث<input class="sLine" placeholder="مثال: إدارة التعليم بمنطقة …"></label>
+          <label>السطر الرابع<input class="sLine" placeholder="مثال: مدرسة …"></label>
+          <label>اسم المعلم<input id="sTeacher"></label>
+          <div><b class="label">الشعار (اختياري)</b>
+            <div class="row"><img id="sLogo" alt="" hidden><label class="btn ghost small file">اختر صورة<input type="file" id="sLogoFile" accept="image/png,image/jpeg" hidden></label>
+              <button class="btn ghost small" type="button" id="sLogoClear">أزله</button></div></div>
+        </div>
+        <div class="row"><button class="btn" type="button" id="sSave">احفظ</button></div>
+      </div>
+      <div class="box">
+        <h2>بياناتك</h2>
+        <p class="hint">كل بياناتك في مجلد واحد على هذا الكمبيوتر، ولا يُرفع شيء منها إلى أي خادم. انسخه احتياطًا من حين لآخر.</p>
+        <div class="row"><code id="dataDir"></code><button class="btn ghost small" type="button" id="openData">افتح المجلد</button></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="/app.js"></script>
+</body>
+</html>

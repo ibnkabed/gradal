@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+ios/build/
+ios/*.xcodeproj/
+tools/test-sheets/
+*.log
+.DS_Store
+Thumbs.db

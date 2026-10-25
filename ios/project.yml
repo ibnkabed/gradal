@@ -39,6 +39,7 @@ targets:
       - path: Gradal/Model/Models.swift
       - path: Gradal/Model/Grading.swift
       - path: Gradal/Sheet/SheetGeometry.swift
+      - path: Gradal/Sheet/AnswerSheetPDF.swift
       - path: Gradal/Import
       - path: Gradal/AI/AIProviders.swift
       - path: Gradal/Exam/ExamRules.swift

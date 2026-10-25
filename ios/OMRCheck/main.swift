@@ -16,6 +16,9 @@ import ImageIO
 //   OMRCheck --import-selftest
 //     Class lists: xlsx (XLSXWriter -> ZipReader -> XLSXReader), HTML, CSV, pasted names, Roster.merge
 //     and archive, like reference/students_import.py and reference/roster.py. Exit 1 on any failure.
+//   OMRCheck --sheet-selftest <sheet-layouts.json> [outDir]
+//     Renders key and personalised sheets with AnswerSheetPDF, rasterises them and reads them back with
+//     SheetReader (OMRCheck/SheetSelfTest.swift). Exit 1 on any mismatch; outDir gets PNGs of the pages.
 //   OMRCheck --exam-selftest
 //     The question writer's pure rules (ExamMaker.clean, balance, parseJSON, AIProviders.pickModel,
 //     BookRules), like reference/exam_maker.py, ai.py and books.py. Exit 1 on any failure.
@@ -407,6 +410,21 @@ if args.count >= 4 && args[1] == "--geometry" {
         print("geometry: \(error)")
         exit(1)
     }
+}
+
+if args.count >= 3 && args[1] == "--sheet-selftest" {
+    let selfTestLayouts: SheetLayouts
+    do {
+        selfTestLayouts = try SheetLayouts.load(from: URL(fileURLWithPath: args[2]))
+    } catch {
+        print("cannot read layouts: \(error)")
+        exit(2)
+    }
+    let outDir: URL? = args.count >= 4 ? URL(fileURLWithPath: args[3], isDirectory: true) : nil
+    let failures = sheetSelfTest(layouts: selfTestLayouts, outDir: outDir)
+    for f in failures { print("FAIL: \(f)") }
+    print(failures.isEmpty ? "sheet self-test: ok" : "sheet self-test: \(failures.count) failure(s)")
+    exit(failures.isEmpty ? 0 : 1)
 }
 
 guard args.count >= 3 else {

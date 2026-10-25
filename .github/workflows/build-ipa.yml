@@ -86,6 +86,20 @@ jobs:
           "$RUNNER_TEMP/omr-build/Build/Products/Release/OMRCheck" --geometry "$RUNNER_TEMP/geometry-in.json" "$RUNNER_TEMP/geometry-swift.json" shared/sheet-layouts.json
           python tools/check_geometry.py compare "$RUNNER_TEMP/geometry-in.json" "$RUNNER_TEMP/geometry-swift.json"
 
+      - name: Render answer sheets with the app's drawing and read them back
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/omr-build/Build/Products/Release/OMRCheck" --sheet-selftest shared/sheet-layouts.json "$RUNNER_TEMP/sheet-png"
+
+      - name: Upload the rendered sheets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-sheets
+          path: ${{ runner.temp }}/sheet-png
+          if-no-files-found: warn
+          retention-days: 14
+
       - name: Build for a physical iPhone without signing
         run: |
           set -euo pipefail

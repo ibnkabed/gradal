@@ -108,21 +108,30 @@ def photograph(flat: np.ndarray, rng: random.Random, out_long: int = 1920) -> np
     out_w, out_h = int(out_long * 0.75), out_long
     if rng.random() < 0.3:
         out_w, out_h = out_h, out_w
-    scale = rng.uniform(0.62, 0.92) * min(out_w / w, out_h / h)
-    cw, ch = w * scale, h * scale
-    cx = out_w / 2 + rng.uniform(-0.06, 0.06) * out_w
-    cy = out_h / 2 + rng.uniform(-0.06, 0.06) * out_h
-    base = np.array([[-cw / 2, -ch / 2], [cw / 2, -ch / 2], [cw / 2, ch / 2], [-cw / 2, ch / 2]])
-    turns = rng.choice([0, 0, 0, 2]) * 90 + rng.uniform(-12, 12)
-    if out_w > out_h:
-        turns += 90
-    a = np.radians(turns)
-    rot = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
-    pts = base @ rot.T
-    pts += np.array([[rng.uniform(-0.07, 0.07) for _ in range(2)] for _ in range(4)]) * np.array([cw, ch])  # perspective
-    pts += [cx, cy]
     src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
-    m = cv2.getPerspectiveTransform(src, np.float32(pts))
+    # the four corner markers (and 3 mm around them) are always in the photo, as the scanner asks for
+    px = w / LAYOUT["page"]["widthMm"]
+    reach = LAYOUT["markers"]["sizeMm"] / 2 + 3.0
+    must = np.float32([[[(x + dx) * px, (y + dy) * px]] for x, y in LAYOUT["markers"]["centers"]
+                       for dx in (-reach, reach) for dy in (-reach, reach)])
+    while True:
+        scale = rng.uniform(0.62, 0.92) * min(out_w / w, out_h / h)
+        cw, ch = w * scale, h * scale
+        cx = out_w / 2 + rng.uniform(-0.06, 0.06) * out_w
+        cy = out_h / 2 + rng.uniform(-0.06, 0.06) * out_h
+        base = np.array([[-cw / 2, -ch / 2], [cw / 2, -ch / 2], [cw / 2, ch / 2], [-cw / 2, ch / 2]])
+        turns = rng.choice([0, 0, 0, 2]) * 90 + rng.uniform(-12, 12)
+        if out_w > out_h:
+            turns += 90
+        a = np.radians(turns)
+        rot = np.array([[np.cos(a), -np.sin(a)], [np.sin(a), np.cos(a)]])
+        pts = base @ rot.T
+        pts += np.array([[rng.uniform(-0.07, 0.07) for _ in range(2)] for _ in range(4)]) * np.array([cw, ch])  # perspective
+        pts += [cx, cy]
+        m = cv2.getPerspectiveTransform(src, np.float32(pts))
+        seen = cv2.perspectiveTransform(must, m).reshape(-1, 2)
+        if (seen.min() >= 0) and (seen[:, 0].max() < out_w) and (seen[:, 1].max() < out_h):
+            break
     desk = rng.randint(70, 150)
     photo = cv2.warpPerspective(flat, m, (out_w, out_h), flags=cv2.INTER_AREA, borderValue=desk).astype(np.float32)
     # paper is a bit grey, light falls off across the frame

@@ -27,7 +27,7 @@ from __future__ import annotations
 SHEET_VERSION = 5   # 5: area ends above the raised bottom markers (layout 5)
 
 AREA_LEFT, AREA_RIGHT = 22.0, 156.0     # left of the student-ID block, right of the barcode
-AREA_TOP, AREA_BOTTOM = 56.0, 264.0   # under the name/ID row, above the bottom markers (268.5 mm)
+AREA_TOP, AREA_BOTTOM = 56.0, 264.0   # under the name/ID row, above the bottom markers (282 mm since layout 6)
 PAGE_CAPTION_H = 5.0                    # "Page n" above a column, only when pages are given
 BOX_W = 31.0
 TITLE_H = 6.5

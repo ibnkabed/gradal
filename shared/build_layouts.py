@@ -25,16 +25,25 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-LAYOUT_VERSION = 5   # 5: bottom markers raised 13 mm — home printers clip the last ~10 mm of A4
+LAYOUT_VERSION = 6   # 6 (2026-10-25, owner): the frame is the header's width, and the bottom margin equals the top one
+# 5: bottom markers raised 13 mm — clipped at 285 mm, in fact by AirPrint printing on Letter (fixed: always A4)
+def r(v: float) -> float:
+    return round(v, 3)
+
+
 PAGE = {"widthMm": 210.0, "heightMm": 297.0}
 
 HEADER_BOX = [12.45, 8.0, 197.55, 24.0]       # x0, y0, x1, y1 of the school header
 
 MARKER_SIZE = 7.0
-FRAME_TOP, FRAME_BOTTOM, FRAME_LEFT, FRAME_RIGHT = 34.0, 272.0, 14.0, 196.0   # bottom markers end 21.5 mm above the edge
-MARKERS = [[FRAME_LEFT, FRAME_TOP], [FRAME_RIGHT, FRAME_TOP],
-           [FRAME_RIGHT, FRAME_BOTTOM], [FRAME_LEFT, FRAME_BOTTOM]]          # TL, TR, BR, BL
-ORIENTATION = {"center": [26.0, FRAME_TOP], "sizeMm": 3.5}
+# The markers' outer edges are the header's left and right edges, and the bottom markers end as far from
+# the bottom edge as the header starts from the top one (owner, 2026-10-25).
+FRAME_TOP = 34.0
+FRAME_LEFT, FRAME_RIGHT = HEADER_BOX[0] + MARKER_SIZE / 2, HEADER_BOX[2] - MARKER_SIZE / 2
+FRAME_BOTTOM = PAGE["heightMm"] - HEADER_BOX[1] - MARKER_SIZE / 2
+MARKERS = [[r(FRAME_LEFT), FRAME_TOP], [r(FRAME_RIGHT), FRAME_TOP],
+           [r(FRAME_RIGHT), r(FRAME_BOTTOM)], [r(FRAME_LEFT), r(FRAME_BOTTOM)]]          # TL, TR, BR, BL
+ORIENTATION = {"center": [FRAME_LEFT + 12.0, FRAME_TOP], "sizeMm": 3.5}
 
 BARCODE_BITS = 22
 BARCODE_X = FRAME_LEFT
@@ -63,10 +72,6 @@ NAME_BOX = [34.0, 40.0, 120.0, 49.0]
 INFO_AT = [124.0, 46.5]                        # class / model text, left aligned
 ID_LABEL_AT = [ID_X + ID_PITCH_X, 44.0]        # centred over the ID block
 ID_BOXES_Y = [47.5, 53.5]                      # write-in boxes above the ID bubbles
-
-
-def r(v: float) -> float:
-    return round(v, 3)
 
 
 def crc6(value: int, nbits: int) -> int:
@@ -104,7 +109,7 @@ def build() -> dict:
     probes = []
     for i in range(12):
         probes.append([r(34 + i * (186 - 34) / 11), r(FRAME_TOP - 6.0)])        # under the header
-        probes.append([r(24 + i * (186 - 24) / 11), r(FRAME_BOTTOM + 6.0)])     # below the frame
+        probes.append([r(24 + i * (186 - 24) / 11), r(FRAME_BOTTOM - 8.0)])     # between the questions and the bottom markers
     for i in range(16):
         y = FRAME_TOP + 9 + i * (FRAME_BOTTOM - FRAME_TOP - 18) / 15
         probes.append([r(FRAME_LEFT - 7.0), r(y)])

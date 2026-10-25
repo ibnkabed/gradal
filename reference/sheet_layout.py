@@ -24,10 +24,10 @@ the phone reads the bubble positions from there — it never recomputes them.
 
 from __future__ import annotations
 
-SHEET_VERSION = 5   # 5: area ends above the raised bottom markers (layout 5)
+SHEET_VERSION = 6   # 6: area 9 mm lower with the frame (layout 7); 5: area ends above the raised bottom markers (layout 5)
 
 AREA_LEFT, AREA_RIGHT = 22.0, 156.0     # left of the student-ID block, right of the barcode
-AREA_TOP, AREA_BOTTOM = 56.0, 264.0   # under the name/ID row, above the bottom markers (282 mm since layout 6)
+AREA_TOP, AREA_BOTTOM = 65.0, 268.5   # under the name/ID row, 4.5 mm above the bottom markers (273 mm, layout 7)
 PAGE_CAPTION_H = 5.0                    # "Page n" above a column, only when pages are given
 BOX_W = 31.0
 TITLE_H = 6.5

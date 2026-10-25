@@ -25,7 +25,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-LAYOUT_VERSION = 6   # 6 (2026-10-25, owner): the frame is the header's width, and the bottom margin equals the top one
+LAYOUT_VERSION = 7   # 7 (2026-10-25): everything 9 mm lower, margins 17 mm — the printer does not print the last ~12 mm of A4
+# 6 (2026-10-25, owner): the frame is the header's width, and the bottom margin equals the top one
 # 5: bottom markers raised 13 mm — clipped at 285 mm, in fact by AirPrint printing on Letter (fixed: always A4)
 def r(v: float) -> float:
     return round(v, 3)
@@ -33,12 +34,12 @@ def r(v: float) -> float:
 
 PAGE = {"widthMm": 210.0, "heightMm": 297.0}
 
-HEADER_BOX = [12.45, 8.0, 197.55, 24.0]       # x0, y0, x1, y1 of the school header
+HEADER_BOX = [12.45, 17.0, 197.55, 33.0]      # x0, y0, x1, y1 of the school header
 
 MARKER_SIZE = 7.0
 # The markers' outer edges are the header's left and right edges, and the bottom markers end as far from
 # the bottom edge as the header starts from the top one (owner, 2026-10-25).
-FRAME_TOP = 34.0
+FRAME_TOP = 43.0
 FRAME_LEFT, FRAME_RIGHT = HEADER_BOX[0] + MARKER_SIZE / 2, HEADER_BOX[2] - MARKER_SIZE / 2
 FRAME_BOTTOM = PAGE["heightMm"] - HEADER_BOX[1] - MARKER_SIZE / 2
 MARKERS = [[r(FRAME_LEFT), FRAME_TOP], [r(FRAME_RIGHT), FRAME_TOP],
@@ -47,7 +48,7 @@ ORIENTATION = {"center": [FRAME_LEFT + 12.0, FRAME_TOP], "sizeMm": 3.5}
 
 BARCODE_BITS = 22
 BARCODE_X = FRAME_LEFT
-BARCODE_TOP = 58.0                             # far from the corners: never under a rotated orientation probe
+BARCODE_TOP = 67.0                             # far from the corners: never under a rotated orientation probe
 BARCODE_PITCH = 9.0
 BARCODE_CELL = [3.0, 5.0]                      # width, height
 
@@ -60,18 +61,18 @@ ROWS_PER_COLUMN = 25
 MAX_QUESTIONS = 100
 QUESTIONS_LEFT = 24.0                          # left edge of the first column's number
 QUESTION_LABEL_W = 8.0                         # number -> bubble A
-QUESTIONS_TOP = 60.0
+QUESTIONS_TOP = 69.0
 
 ID_DIGITS = 3
 ID_X = 166.0                                   # centre of digit column 0
 ID_PITCH_X = 6.0
-ID_TOP = 60.0                                  # centre of value 0
+ID_TOP = 69.0                                  # centre of value 0
 ID_PITCH_Y = 5.2
 
-NAME_BOX = [34.0, 40.0, 120.0, 49.0]
-INFO_AT = [124.0, 46.5]                        # class / model text, left aligned
-ID_LABEL_AT = [ID_X + ID_PITCH_X, 44.0]        # centred over the ID block
-ID_BOXES_Y = [47.5, 53.5]                      # write-in boxes above the ID bubbles
+NAME_BOX = [34.0, 49.0, 120.0, 58.0]
+INFO_AT = [124.0, 55.5]                        # class / model text, left aligned
+ID_LABEL_AT = [ID_X + ID_PITCH_X, 53.0]        # centred over the ID block
+ID_BOXES_Y = [56.5, 62.5]                      # write-in boxes above the ID bubbles
 
 
 def crc6(value: int, nbits: int) -> int:
@@ -109,7 +110,7 @@ def build() -> dict:
     probes = []
     for i in range(12):
         probes.append([r(34 + i * (186 - 34) / 11), r(FRAME_TOP - 6.0)])        # under the header
-        probes.append([r(24 + i * (186 - 24) / 11), r(FRAME_BOTTOM - 8.0)])     # between the questions and the bottom markers
+        probes.append([r(24 + i * (186 - 24) / 11), r(FRAME_BOTTOM + 6.0)])     # below the frame
     for i in range(16):
         y = FRAME_TOP + 9 + i * (FRAME_BOTTOM - FRAME_TOP - 18) / 15
         probes.append([r(FRAME_LEFT - 7.0), r(y)])

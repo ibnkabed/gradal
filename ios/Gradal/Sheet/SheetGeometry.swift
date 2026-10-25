@@ -23,11 +23,11 @@ enum SheetGeometryError: LocalizedError, Equatable {
 /// quiz reads right to left: the first column on the right, the number at the box's right edge and
 /// choice أ (index 0) the rightmost bubble.
 enum SheetGeometry {
-    static let version = 5   // 5: area ends above the raised bottom markers (layout 5)
+    static let version = 6   // 6: area 9 mm lower with the frame (layout 7); 5: above the raised bottom markers
     static let minQuestions = 5, maxQuestions = 60
 
     static let areaLeft = 22.0, areaRight = 156.0      // left of the student-ID block, right of the barcode
-    static let areaTop = 56.0, areaBottom = 264.0      // under the name/ID row, above the bottom markers
+    static let areaTop = 65.0, areaBottom = 268.5      // under the name/ID row, above the bottom markers
     static let boxW = 31.0
     static let titleH = 6.5
     static let boxPadTop = 1.5, boxPadBottom = 1.0

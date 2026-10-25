@@ -9,7 +9,7 @@ enum StudentsText {
                           "الشعبة", "المقرر", "المادة", "المعلم", "التاريخ", "الجنسية", "المرحلة", "سعودي", "سعودية"]
 
     /// Class lines in Noor's reports: «الفصل: 1», «الصف: الأول المتوسط - 1», «أول متوسط 1»…
-    static func className(in line: String) -> String? {
+    static func classLine(in line: String) -> String? {
         for label in ["الفصل", "الشعبة", "الصف"] {
             guard let r = line.range(of: label) else { continue }
             var rest = String(line[r.upperBound...])
@@ -52,7 +52,7 @@ enum StudentsText {
         for raw in text.components(separatedBy: .newlines) {
             let line = StudentsImport.collapse(raw)
             if line.isEmpty { continue }
-            if let c = className(in: line) {
+            if let c = classLine(in: line) {
                 current = c
                 continue
             }

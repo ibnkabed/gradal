@@ -1,6 +1,7 @@
 import Foundation
 
-/// Grading rule from shared/PROTOCOL.md (identical on the PC).
+/// Grading rule (docs/DATA.md): question i counts when key[i] is not empty; it earns points[i] when the
+/// answer is exactly one letter and that letter is in key[i].
 enum Grading {
     static let letters = ["A", "B", "C", "D"]
     /// Shown for A–D on an Arabic quiz; answers and keys stay A–D everywhere else.
@@ -15,32 +16,23 @@ enum Grading {
         })
     }
 
-    /// Points earned per question (0 for wrong, blank or dropped).
-    static func perQuestion(_ quiz: Quiz, answers: [String], version: Int) -> [Double] {
-        let k = key(quiz, version: version)
-        return (0..<max(quiz.questionCount, 0)).map { i in
-            let accepted = i < k.count ? k[i] : ""
+    /// Points earned per question (0 for wrong, blank or not counted).
+    static func perQuestion(_ quiz: Quiz, answers: [String]) -> [Double] {
+        (0..<max(quiz.questionCount, 0)).map { i in
+            let accepted = i < quiz.key.count ? quiz.key[i] : ""
             let answer = i < answers.count ? answers[i] : ""
             return !accepted.isEmpty && isCorrect(answer: answer, key: accepted) ? quiz.point(i) : 0
         }
-    }
-
-    /// keys[version] if that key exists, else keys[0].
-    static func key(_ quiz: Quiz, version: Int) -> [String] {
-        let v = version
-        if v >= 0 && v < quiz.keys.count { return quiz.keys[v] }
-        return quiz.keys.first ?? []
     }
 
     static func isCorrect(answer: String, key: String) -> Bool {
         answer.count == 1 && key.contains(answer)
     }
 
-    static func grade(_ quiz: Quiz, answers: [String], version: Int) -> (earned: Double, possible: Double) {
-        let k = key(quiz, version: version)
+    static func grade(_ quiz: Quiz, answers: [String]) -> (earned: Double, possible: Double) {
         var earned = 0.0, possible = 0.0
         for i in 0..<quiz.questionCount {
-            let accepted = i < k.count ? k[i] : ""
+            let accepted = i < quiz.key.count ? quiz.key[i] : ""
             if accepted.isEmpty { continue }
             let p = quiz.point(i)
             possible += p

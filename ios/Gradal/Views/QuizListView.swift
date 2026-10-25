@@ -1,64 +1,75 @@
 import SwiftUI
 
-/// Quizzes come from the computer only; the phone prints, scans and shows results.
+/// The tests: make one (from a book, or with a ready key), review drafts, open a test, scan any sheet.
 struct QuizListView: View {
     @EnvironmentObject private var store: Store
-    @EnvironmentObject private var companion: Companion
+    @EnvironmentObject private var ai: AIClient
     @State private var scanning = false
+    @State private var path = NavigationPath()
+    @State private var newFromBook = false
+    @State private var newManual = false
+
+    enum Route: Hashable {
+        case quiz(String)
+        case draft(String)
+    }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             List {
                 Section {
                     Button {
-                        scanning = true
+                        newFromBook = true
                     } label: {
-                        Label("امسح", systemImage: "camera.viewfinder")
-                            .font(.title2.bold())
-                            .frame(maxWidth: .infinity, minHeight: 60)
+                        Label("اختبار جديد من كتاب", systemImage: "sparkles")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 48)
                     }
                     .buttonStyle(.borderedProminent)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
+                    Button {
+                        newManual = true
+                    } label: {
+                        Label("اختبار بمفتاح جاهز", systemImage: "list.number")
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                    }
+                    .buttonStyle(.bordered)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 } footer: {
-                    Text("امسح أي ورقة من أي اختبار: الجوال يعرف الاختبار من شريط الورقة.")
-                }
-
-                if !store.orphanGroups.isEmpty {
-                    Section {
-                        ForEach(store.orphanGroups) { group in
-                            HStack {
-                                Text("اختبار غير معروف (\(String(group.code)))")
-                                    .foregroundColor(.orange)
-                                Spacer()
-                                Text("الأوراق: \(group.count)")
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        .onDelete { offsets in
-                            let groups = store.orphanGroups
-                            for i in offsets where i < groups.count {
-                                store.deleteOrphans(code: groups[i].code)
-                            }
-                        }
-                    } header: {
-                        Text("بانتظار اختبارها")
-                    } footer: {
-                        Text("تُصحَّح هذه الأوراق تلقائيًا حين يصل اختبارها من الكمبيوتر.")
+                    if ai.linked.isEmpty {
+                        Text("لكتابة الأسئلة من كتاب اربط مزوّد ذكاء اصطناعي مجانيًا من «الإعدادات».")
                     }
                 }
 
-                Section("الاختبارات") {
+                if !store.drafts.isEmpty {
+                    Section("مسودات بانتظار مراجعتك") {
+                        ForEach(store.drafts) { paper in
+                            NavigationLink(value: Route.draft(paper.id)) {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(paper.request.name).font(.headline)
+                                    Text(countWord(paper.questions.count, questionsForms) + " — راجعها واعتمدها")
+                                        .font(.caption)
+                                        .foregroundColor(.orange)
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Section("اختباراتي") {
                     if store.activeQuizzes.isEmpty {
-                        Text("لا اختبارات بعد. أنشئ الاختبار في Gradal على الكمبيوتر، ثم زامن من «الإعدادات».")
+                        Text("لا اختبارات بعد.")
                             .foregroundColor(.secondary)
                     }
                     ForEach(store.activeQuizzes) { quiz in
-                        NavigationLink(value: quiz.id) {
+                        NavigationLink(value: Route.quiz(quiz.id)) {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(quiz.name.isEmpty ? "بلا اسم" : quiz.name)
-                                    .font(.headline)
-                                Text("\(quiz.date) · الرمز \(String(quiz.code)) · \(quiz.questionCount) سؤالًا · الأوراق: \(store.countedScans(quiz).count)")
+                                Text(quiz.name).font(.headline)
+                                let scans = store.countedScans(quiz).count
+                                Text("\(quiz.date) · \(countWord(quiz.questionCount, questionsForms)) · "
+                                     + (scans == 0 ? "لم يُمسح بعد" : countWord(scans, sheetsForms)))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                             }
@@ -67,13 +78,47 @@ struct QuizListView: View {
                 }
             }
             .navigationTitle("الاختبارات")
-            .navigationDestination(for: String.self) { id in
-                QuizDetailView(quizId: id)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        scanning = true
+                    } label: {
+                        Label("امسح", systemImage: "camera.viewfinder")
+                    }
+                    .disabled(store.activeQuizzes.isEmpty)
+                }
+            }
+            .navigationDestination(for: Route.self) { route in
+                switch route {
+                case .quiz(let id):
+                    QuizDetailView(quizId: id, path: $path)
+                case .draft(let id):
+                    PaperReviewView(paperId: id) { quiz in
+                        path = NavigationPath()
+                        path.append(Route.quiz(quiz.id))
+                    }
+                }
+            }
+            .sheet(isPresented: $newFromBook) {
+                NewFromBookView { paperId in
+                    newFromBook = false
+                    path.append(Route.draft(paperId))
+                }
+                .environmentObject(store)
+                .environmentObject(ai)
+                .environment(\.layoutDirection, .rightToLeft)
+            }
+            .sheet(isPresented: $newManual) {
+                ManualQuizView(quizId: nil) { quiz in
+                    newManual = false
+                    path.append(Route.quiz(quiz.id))
+                }
+                .environmentObject(store)
+                .environment(\.layoutDirection, .rightToLeft)
             }
             .fullScreenCover(isPresented: $scanning) {
                 ScannerView()
                     .environmentObject(store)
-                    .environmentObject(companion)
                     .environment(\.layoutDirection, .rightToLeft)
             }
         }

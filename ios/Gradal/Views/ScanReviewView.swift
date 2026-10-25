@@ -65,8 +65,8 @@ struct ScanReviewView: View {
     }
 
     private func form(_ quiz: Quiz, _ scan: Scan) -> some View {
-        let key = Grading.key(quiz, version: scan.version)
-        let g = Grading.grade(quiz, answers: scan.answers, version: scan.version)
+        let key = quiz.key
+        let g = Grading.grade(quiz, answers: scan.answers)
         let students = store.studentsFor(quiz)
         return List {
             if let image {
@@ -89,7 +89,7 @@ struct ScanReviewView: View {
                 }
             } else if scan.hasImage {
                 Section {
-                    Text("صورة الورقة على الكمبيوتر.")
+                    Text("صورة الورقة غير متاحة.")
                         .foregroundColor(.secondary)
                 }
             }

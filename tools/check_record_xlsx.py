@@ -3,7 +3,7 @@
     python tools/check_record_xlsx.py <record.xlsx>
 
 The file comes from `OMRCheck --xlsx <out.xlsx>` (ios/Gradal/Record/RecordSheet.swift, sample()):
-two classes, 17 questions, the Midterm sections. Checks it against shared/PROTOCOL.md
+two classes, 17 questions, the Midterm sections. Checks it against docs/DATA.md
 «Record sheet». Exit code 0 only when everything matches.
 """
 

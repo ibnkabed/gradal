@@ -77,8 +77,8 @@ final class ScannerModel: ObservableObject {
         case let .blocked(code, known, corners, size):
             outline = convert(corners, size)
             status = known
-                ? "زامن مع الكمبيوتر أولًا لتجهيز ورقة هذا الاختبار"
-                : "اختبار غير معروف (\(String(code))) — زامن أولًا"
+                ? "افتح الاختبار واحفظه من جديد لتجهيز ورقته"
+                : "ورقة اختبار غير موجود في هذا الجوال (\(String(code)))"
         case let .seen(corners, size, holding):
             outline = convert(corners, size)
             status = holding ? "تم حفظ هذه الورقة. ضع الورقة التالية" : "ثبّت الجوال…"

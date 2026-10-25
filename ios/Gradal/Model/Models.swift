@@ -1,180 +1,157 @@
 import Foundation
 
-/// Records exactly as in shared/PROTOCOL.md. Decoders are lenient about missing optional keys.
-protocol SyncRecord {
-    var id: String { get }
-    var updatedAt: String { get }
-}
+/// Gradal's records (docs/DATA.md). Everything lives on the phone; decoders are lenient about missing keys so
+/// older saved data and backups still load.
 
-struct SchoolClass: Codable, Identifiable, Hashable, SyncRecord {
+struct SchoolClass: Codable, Identifiable, Hashable {
     var id: String
     var name: String
-    var prefix: Int?
-    var archived: String?         // label of the year / semester it was closed in
-    var updatedAt: String
-    var deleted: Bool
+    var prefix: Int               // 1-9, the first digit of its students' IDs (unique among non-archived classes)
+    var archived: String?         // label of the school year it was closed in
+    var deleted: Bool = false
 
-    enum CodingKeys: String, CodingKey {
-        case id, name, prefix, archived, updatedAt, deleted
+    enum CodingKeys: String, CodingKey { case id, name, prefix, archived, deleted }
+
+    init(id: String = UUID().uuidString.lowercased(), name: String, prefix: Int) {
+        self.id = id
+        self.name = name
+        self.prefix = prefix
     }
-}
 
-extension SchoolClass {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
-        prefix = try c.decodeIfPresent(Int.self, forKey: .prefix)
+        prefix = try c.decodeIfPresent(Int.self, forKey: .prefix) ?? 0
         archived = try c.decodeIfPresent(String.self, forKey: .archived)
-        updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
         deleted = try c.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
     }
 }
 
-struct Student: Codable, Identifiable, Hashable, SyncRecord {
+struct Student: Codable, Identifiable, Hashable {
     var id: String
     var classIds: [String]
     var name: String
-    var gradalId: String
-    var externalId: String?
-    var order: Int?
+    var gradalId: String          // exactly 3 digits: class prefix + 2-digit serial, fixed for good
+    var nationalId: String?       // from Noor's export; matches re-imports, never printed
+    var order: Int                // position in the imported class list
     var active: Bool
     var archived: String?
     var archivedActive: Bool?     // whether he was active when archived (stays on the old record sheet)
-    var updatedAt: String
-    var deleted: Bool
+    var deleted: Bool = false
 
     enum CodingKeys: String, CodingKey {
-        case id, classIds, name, gradalId, externalId, order, active, archived, archivedActive, updatedAt, deleted
+        case id, classIds, name, gradalId, nationalId, order, active, archived, archivedActive, deleted
     }
-}
 
-extension Student {
+    init(id: String = UUID().uuidString.lowercased(), classId: String, name: String, gradalId: String,
+         nationalId: String?, order: Int) {
+        self.id = id
+        self.classIds = [classId]
+        self.name = name
+        self.gradalId = gradalId
+        self.nationalId = nationalId
+        self.order = order
+        self.active = true
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         classIds = try c.decodeIfPresent([String].self, forKey: .classIds) ?? []
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         gradalId = try c.decodeIfPresent(String.self, forKey: .gradalId) ?? ""
-        externalId = try c.decodeIfPresent(String.self, forKey: .externalId)
-        order = try c.decodeIfPresent(Int.self, forKey: .order)
+        nationalId = try c.decodeIfPresent(String.self, forKey: .nationalId)
+        order = try c.decodeIfPresent(Int.self, forKey: .order) ?? 9999
         active = try c.decodeIfPresent(Bool.self, forKey: .active) ?? true
         archived = try c.decodeIfPresent(String.self, forKey: .archived)
         archivedActive = try c.decodeIfPresent(Bool.self, forKey: .archivedActive)
-        updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
         deleted = try c.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
     }
 }
 
 struct QuizSection: Codable, Hashable {
     var name: String
-    var en: String?          // English title of its box on the sheet (optional)
-    var from: Int
+    var from: Int                 // 1-based, inclusive
     var to: Int
 }
 
-/// Where the quiz's questions sit on its answer sheet (layout v3). Computed by the PC
-/// (pc/sheet_layout.py) and read-only on the phone.
+/// The quiz's own header lines (the school's lines are in Settings).
+struct QuizHeader: Codable, Hashable {
+    var subject: String = ""
+    var title: String = ""
+    var grade: String = ""
+    var extra: String = ""
+
+    var lines: [String] { [subject, title, grade, extra].map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }
+}
+
+/// One framed box of questions on the answer sheet (Sheet/SheetGeometry.swift computes it).
+struct SheetBox: Codable, Hashable {
+    var title: String
+    var from: Int
+    var to: Int
+    var x0: Double
+    var y0: Double
+    var x1: Double
+    var y1: Double
+    var titleY1: Double
+    var numberX: Double
+    var numberAnchorStart: Bool   // true: the number's left edge is at numberX (Arabic); false: its right edge
+}
+
+struct SheetColumn: Codable, Hashable {
+    var x0: Double
+    var x1: Double
+    var boxes: [SheetBox]
+}
+
+/// Where a quiz's questions sit on its answer sheet, in millimetres on A4. The scanner reads
+/// questionBubbles[question][choice]; choice 0 is A (أ), whatever its place on the paper.
 struct QuizSheet: Codable, Hashable {
     var version: Int
-    var pitch: Double?
-    var questionBubbles: [[[Double]]]   // [question][choice] -> [x, y] in mm
-    var columns: JSONValue?             // passed through untouched
-
-    enum CodingKeys: String, CodingKey {
-        case version, pitch, questionBubbles, columns
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
-        pitch = try c.decodeIfPresent(Double.self, forKey: .pitch)
-        questionBubbles = try c.decodeIfPresent([[[Double]]].self, forKey: .questionBubbles) ?? []
-        columns = try c.decodeIfPresent(JSONValue.self, forKey: .columns)
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(version, forKey: .version)
-        try c.encodeIfPresent(pitch, forKey: .pitch)
-        try c.encode(questionBubbles, forKey: .questionBubbles)
-        try c.encodeIfPresent(columns, forKey: .columns)
-    }
+    var pitch: Double
+    var rtl: Bool
+    var questionBubbles: [[[Double]]]
+    var columns: [SheetColumn]
 }
 
-/// Any JSON value, kept as is (quiz header lines are edited on the PC only).
-indirect enum JSONValue: Codable, Hashable {
-    case null
-    case bool(Bool)
-    case number(Double)
-    case string(String)
-    case array([JSONValue])
-    case object([String: JSONValue])
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.singleValueContainer()
-        if c.decodeNil() {
-            self = .null
-        } else if let v = try? c.decode(Bool.self) {
-            self = .bool(v)
-        } else if let v = try? c.decode(Double.self) {
-            self = .number(v)
-        } else if let v = try? c.decode(String.self) {
-            self = .string(v)
-        } else if let v = try? c.decode([JSONValue].self) {
-            self = .array(v)
-        } else {
-            self = .object(try c.decode([String: JSONValue].self))
-        }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.singleValueContainer()
-        switch self {
-        case .null: try c.encodeNil()
-        case .bool(let v): try c.encode(v)
-        case .number(let v): try c.encode(v)
-        case .string(let v): try c.encode(v)
-        case .array(let v): try c.encode(v)
-        case .object(let v): try c.encode(v)
-        }
-    }
-}
-
-struct Quiz: Codable, Identifiable, Hashable, SyncRecord {
+struct Quiz: Codable, Identifiable, Hashable {
     var id: String
     var code: Int                 // 1000-9999, printed in the barcode
     var name: String
     var date: String              // yyyy-MM-dd
     var classIds: [String]
+    var language: String          // "ar" or "en"
     var questionCount: Int
-    var pages: [Int]?             // questions on each page of the question paper (optional)
-    var sheet: QuizSheet?         // computed by the PC; dropped locally when it goes stale
-    var keys: [[String]]          // one key in practice; [version][question] accepted letters, "" = dropped
+    var sheet: QuizSheet?         // computed whenever the quiz is saved
+    var key: [String]             // accepted letters per question ("B", "AC"); "" = not counted
     var points: [Double]
     var sections: [QuizSection]
-    var header: JSONValue?        // PC-only, passed through untouched
-    var language: String?         // "ar" or "en" (absent = "en"); only how A–D are shown
-    var updatedAt: String
-    var deleted: Bool
+    var header: QuizHeader
+    var paperId: String?          // the questions written in Gradal, if any
+    var deleted: Bool = false
 
     enum CodingKeys: String, CodingKey {
-        case id, code, name, date, classIds, questionCount, pages, sheet, keys, points, sections, header
-        case language, updatedAt, deleted
+        case id, code, name, date, classIds, language, questionCount, sheet, key, points, sections, header, paperId, deleted
     }
 
-    /// True when the PC's sheet covers every question, so papers can be read.
-    var sheetReady: Bool {
-        guard let sheet else { return false }
-        return sheet.questionBubbles.count >= questionCount && questionCount > 0
+    init(id: String = UUID().uuidString.lowercased(), code: Int, name: String, date: String, classIds: [String],
+         language: String, key: [String], sections: [QuizSection], header: QuizHeader, paperId: String? = nil) {
+        self.id = id
+        self.code = code
+        self.name = name
+        self.date = date
+        self.classIds = classIds
+        self.language = language
+        self.questionCount = key.count
+        self.key = key
+        self.points = Array(repeating: 1, count: key.count)
+        self.sections = sections
+        self.header = header
+        self.paperId = paperId
     }
 
-    var isArabic: Bool { language == "ar" }
-
-    func point(_ i: Int) -> Double { i < points.count ? points[i] : 1 }
-}
-
-extension Quiz {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
@@ -182,118 +159,158 @@ extension Quiz {
         name = try c.decodeIfPresent(String.self, forKey: .name) ?? ""
         date = try c.decodeIfPresent(String.self, forKey: .date) ?? ""
         classIds = try c.decodeIfPresent([String].self, forKey: .classIds) ?? []
-        keys = try c.decodeIfPresent([[String]].self, forKey: .keys) ?? [[]]
-        let count = try c.decodeIfPresent(Int.self, forKey: .questionCount)
-        questionCount = count ?? (keys.first?.count ?? 0)
-        pages = try c.decodeIfPresent([Int].self, forKey: .pages)
+        language = try c.decodeIfPresent(String.self, forKey: .language) ?? "ar"
+        key = try c.decodeIfPresent([String].self, forKey: .key) ?? []
+        questionCount = try c.decodeIfPresent(Int.self, forKey: .questionCount) ?? key.count
         sheet = try? c.decodeIfPresent(QuizSheet.self, forKey: .sheet)
         points = try c.decodeIfPresent([Double].self, forKey: .points) ?? []
         sections = try c.decodeIfPresent([QuizSection].self, forKey: .sections) ?? []
-        header = try c.decodeIfPresent(JSONValue.self, forKey: .header)
-        language = try? c.decodeIfPresent(String.self, forKey: .language)
-        updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
+        header = try c.decodeIfPresent(QuizHeader.self, forKey: .header) ?? QuizHeader()
+        paperId = try c.decodeIfPresent(String.self, forKey: .paperId)
         deleted = try c.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
     }
 
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(id, forKey: .id)
-        try c.encode(code, forKey: .code)
-        try c.encode(name, forKey: .name)
-        try c.encode(date, forKey: .date)
-        try c.encode(classIds, forKey: .classIds)
-        try c.encode(questionCount, forKey: .questionCount)
-        try c.encodeIfPresent(pages, forKey: .pages)
-        try c.encodeIfPresent(sheet, forKey: .sheet)
-        try c.encode(keys, forKey: .keys)
-        try c.encode(points, forKey: .points)
-        try c.encode(sections, forKey: .sections)
-        try c.encodeIfPresent(header, forKey: .header)
-        try c.encodeIfPresent(language, forKey: .language)
-        try c.encode(updatedAt, forKey: .updatedAt)
-        try c.encode(deleted, forKey: .deleted)
+    var isArabic: Bool { language == "ar" }
+
+    /// True when the sheet covers every question, so papers can be printed and read.
+    var sheetReady: Bool {
+        guard let sheet else { return false }
+        return sheet.questionBubbles.count >= questionCount && questionCount > 0
     }
+
+    func point(_ i: Int) -> Double { i < points.count ? points[i] : 1 }
 }
 
-struct Scan: Codable, Identifiable, Hashable, SyncRecord {
+struct Scan: Codable, Identifiable, Hashable {
     var id: String
     var quizId: String
     var studentId: String?
     var gradalId: String
-    var version: Int
-    var answers: [String]
+    var answers: [String]         // "" blank, "BD" more than one (never earns)
     var earned: Double
     var possible: Double
     var scannedAt: String
-    var deviceId: String
     var edited: Bool
     var hasImage: Bool
-    var updatedAt: String
-    var deleted: Bool
+    var deleted: Bool = false
 
     enum CodingKeys: String, CodingKey {
-        case id, quizId, studentId, gradalId, version, answers, earned, possible
-        case scannedAt, deviceId, edited, hasImage, updatedAt, deleted
+        case id, quizId, studentId, gradalId, answers, earned, possible, scannedAt, edited, hasImage, deleted
     }
-}
 
-extension Scan {
+    init(id: String = UUID().uuidString.lowercased(), quizId: String, studentId: String?, gradalId: String,
+         answers: [String], earned: Double, possible: Double, scannedAt: String, hasImage: Bool) {
+        self.id = id
+        self.quizId = quizId
+        self.studentId = studentId
+        self.gradalId = gradalId
+        self.answers = answers
+        self.earned = earned
+        self.possible = possible
+        self.scannedAt = scannedAt
+        self.edited = false
+        self.hasImage = hasImage
+    }
+
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(String.self, forKey: .id)
         quizId = try c.decodeIfPresent(String.self, forKey: .quizId) ?? ""
         studentId = try c.decodeIfPresent(String.self, forKey: .studentId)
         gradalId = try c.decodeIfPresent(String.self, forKey: .gradalId) ?? ""
-        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 0
         answers = try c.decodeIfPresent([String].self, forKey: .answers) ?? []
         earned = try c.decodeIfPresent(Double.self, forKey: .earned) ?? 0
         possible = try c.decodeIfPresent(Double.self, forKey: .possible) ?? 0
         scannedAt = try c.decodeIfPresent(String.self, forKey: .scannedAt) ?? ""
-        deviceId = try c.decodeIfPresent(String.self, forKey: .deviceId) ?? ""
         edited = try c.decodeIfPresent(Bool.self, forKey: .edited) ?? false
         hasImage = try c.decodeIfPresent(Bool.self, forKey: .hasImage) ?? false
-        updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt) ?? ""
         deleted = try c.decodeIfPresent(Bool.self, forKey: .deleted) ?? false
-    }
-
-    /// studentId is written as null when absent, as PROTOCOL shows.
-    func encode(to encoder: Encoder) throws {
-        var c = encoder.container(keyedBy: CodingKeys.self)
-        try c.encode(id, forKey: .id)
-        try c.encode(quizId, forKey: .quizId)
-        try c.encode(studentId, forKey: .studentId)
-        try c.encode(gradalId, forKey: .gradalId)
-        try c.encode(version, forKey: .version)
-        try c.encode(answers, forKey: .answers)
-        try c.encode(earned, forKey: .earned)
-        try c.encode(possible, forKey: .possible)
-        try c.encode(scannedAt, forKey: .scannedAt)
-        try c.encode(deviceId, forKey: .deviceId)
-        try c.encode(edited, forKey: .edited)
-        try c.encode(hasImage, forKey: .hasImage)
-        try c.encode(updatedAt, forKey: .updatedAt)
-        try c.encode(deleted, forKey: .deleted)
     }
 }
 
-/// GET /m/snapshot
-struct Snapshot: Decodable {
-    var serverTime: String?
-    var classes: [SchoolClass]
-    var students: [Student]
-    var quizzes: [Quiz]
+/// A question written by the AI or by the teacher. answer: the right option's index (0-3); for true/false
+/// 0 = true (صح, A) and 1 = false (خطأ, B).
+struct Question: Codable, Hashable, Identifiable {
+    enum Kind: String, Codable { case mcq, tf }
+    var id: String = UUID().uuidString.lowercased()
+    var kind: Kind
+    var text: String
+    var options: [String]         // four for mcq, empty for tf
+    var answer: Int
 
-    enum CodingKeys: String, CodingKey {
-        case serverTime, classes, students, quizzes
+    enum CodingKeys: String, CodingKey { case id, kind, text, options, answer }
+
+    init(kind: Kind, text: String, options: [String], answer: Int) {
+        self.kind = kind
+        self.text = text
+        self.options = options
+        self.answer = answer
     }
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        serverTime = try c.decodeIfPresent(String.self, forKey: .serverTime)
-        classes = try c.decodeIfPresent([SchoolClass].self, forKey: .classes) ?? []
-        students = try c.decodeIfPresent([Student].self, forKey: .students) ?? []
-        quizzes = try c.decodeIfPresent([Quiz].self, forKey: .quizzes) ?? []
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? UUID().uuidString.lowercased()
+        kind = try c.decodeIfPresent(Kind.self, forKey: .kind) ?? .mcq
+        text = try c.decodeIfPresent(String.self, forKey: .text) ?? ""
+        options = try c.decodeIfPresent([String].self, forKey: .options) ?? []
+        answer = try c.decodeIfPresent(Int.self, forKey: .answer) ?? 0
     }
+
+    /// The letter on the answer sheet.
+    var letter: String { Grading.letters[min(max(answer, 0), 3)] }
+}
+
+/// What the teacher asked the question writer for.
+struct PaperRequest: Codable, Hashable {
+    var name: String
+    var subject: String
+    var grade: String
+    var language: String          // "ar" | "en"
+    var classIds: [String]
+    var bookId: String
+    var pageFrom: Int
+    var pageTo: Int
+    var mcq: Int
+    var tf: Int
+    var notes: String
+}
+
+/// The questions of a test written in Gradal: a draft until the teacher approves it, then the quiz's paper.
+struct Paper: Codable, Identifiable, Hashable {
+    var id: String = UUID().uuidString.lowercased()
+    var createdAt: String
+    var request: PaperRequest
+    var questions: [Question]     // multiple choice first, then true/false
+    var providers: [String]       // which AI providers wrote / reviewed it
+    var quizId: String?           // set on approval
+}
+
+/// A textbook PDF the teacher added (Application Support/Gradal/books/<id>.pdf).
+struct Book: Codable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var pages: Int
+    var size: Int
+    var addedAt: String
+}
+
+struct Settings: Codable, Hashable {
+    var schoolLines: [String] = ["المملكة العربية السعودية", "وزارة التعليم", "", ""]
+    var teacher: String = ""
+    var logoPNG: Data?
+
+    enum CodingKeys: String, CodingKey { case schoolLines, teacher, logoPNG }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schoolLines = try c.decodeIfPresent([String].self, forKey: .schoolLines) ?? Settings().schoolLines
+        teacher = try c.decodeIfPresent(String.self, forKey: .teacher) ?? ""
+        logoPNG = try c.decodeIfPresent(Data.self, forKey: .logoPNG)
+    }
+
+    var lines: [String] { schoolLines.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty } }
 }
 
 /// ISO-8601 UTC timestamps, whole seconds (`2026-10-21T08:30:00Z`).
@@ -306,26 +323,12 @@ enum Stamp {
 
     static func now() -> String { string(Date()) }
 
-    /// A stamp strictly newer than `previous`, so a quick second edit still wins the merge.
-    static func after(_ previous: String) -> String {
-        let current = Date()
-        if let old = date(previous), old >= current.addingTimeInterval(-0.5) {
-            return string(old.addingTimeInterval(1))
-        }
-        return string(current)
-    }
-
     static func date(_ s: String) -> Date? {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         if let d = f.date(from: s) { return d }
         f.formatOptions = [.withInternetDateTime]
         return f.date(from: s)
-    }
-
-    static func isNewer(_ a: String, than b: String) -> Bool {
-        if let da = date(a), let db = date(b) { return da > db }
-        return a > b
     }
 }
 
@@ -339,7 +342,7 @@ enum DayFormat {
     }
 
     static func string(from date: Date) -> String { formatter().string(from: date) }
-    static func date(from string: String) -> Date? { formatter().date(from: string) }
+    static func today() -> String { string(from: Date()) }
 }
 
 /// Bundled shared/sheet-layouts.json.
@@ -348,8 +351,6 @@ enum LayoutStore {
         guard let url = Bundle.main.url(forResource: "sheet-layouts", withExtension: "json") else { return nil }
         return try? SheetLayouts.load(from: url)
     }()
-
-    static var maxQuestions: Int { shared?.maxQuestions ?? 100 }
 }
 
 func fmt(_ v: Double) -> String {

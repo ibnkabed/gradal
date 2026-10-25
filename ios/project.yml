@@ -27,7 +27,8 @@ targets:
         CODE_SIGN_STYLE: Automatic
         TARGETED_DEVICE_FAMILY: "1"
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-  # CI only: checks the Swift sheet reader on synthetic photos and writes a sample record .xlsx.
+  # CI only: checks the Swift sheet reader on synthetic photos, writes a sample record .xlsx and computes
+  # sheet geometries for tools/check_geometry.py.
   OMRCheck:
     type: tool
     platform: macOS
@@ -35,6 +36,12 @@ targets:
     sources:
       - path: Gradal/OMR
       - path: Gradal/Record
+      - path: Gradal/Model/Models.swift
+      - path: Gradal/Model/Grading.swift
+      - path: Gradal/Sheet/SheetGeometry.swift
+      - path: Gradal/Import
+      - path: Gradal/AI/AIProviders.swift
+      - path: Gradal/Exam/ExamRules.swift
       - path: OMRCheck
     settings:
       base:

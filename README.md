@@ -2,66 +2,57 @@
 
 # Gradal — اختبارات تُكتب بالذكاء الاصطناعي وتُصحَّح بكاميرا الجوال
 
-[![Tests](https://github.com/ibnkabed/gradal/actions/workflows/tests.yml/badge.svg)](https://github.com/ibnkabed/gradal/actions/workflows/tests.yml)
+[![Build](https://github.com/ibnkabed/gradal/actions/workflows/build-ipa.yml/badge.svg)](https://github.com/ibnkabed/gradal/actions/workflows/build-ipa.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**Gradal تطبيق مجاني مفتوح المصدر للمعلم.** يكتب أسئلة الاختبار من أي كتاب PDF، لأي مادة، بالعربية أو بالإنجليزية. ويطبع ورقة الأسئلة وورقة إجابة باسم كل طالب. ثم يصحح الأوراق بكاميرا الآيفون في ثوانٍ، ويخرج سجل الدرجات في ملف Excel.
+**Gradal تطبيق آيفون مجاني ومفتوح المصدر للمعلم، يعمل وحده بلا كمبيوتر.** تضيف إليه كتاب المنهج ملف PDF، لأي مادة، بالعربية أو بالإنجليزية، فيكتب أسئلة الاختبار. ثم يجهّز ورقة الأسئلة ونموذج الإجابة وورقة إجابة باسم كل طالب. فتطبعها من الجوال، وتصحح الأوراق بكاميرته في ثوانٍ، وتشارك سجل الدرجات ملف Excel.
 
-- **يكتب الأسئلة من كتابك:** ترفع ملف PDF للمنهج، وتختار الصفحات وعدد الأسئلة، فيكتبها لك. وتراجعها وتعدّلها قبل اعتمادها.
+- **يكتب الأسئلة من كتابك:** تختار الصفحات وعدد أسئلة «الاختيار من متعدد» و«الصح أو الخطأ»، فيكتبها لك. وتراجعها وتعدّلها قبل اعتمادها.
 - **مجاني:** يعمل بمزوّدي ذكاء اصطناعي مجانيين، مثل Gemini وQwen وGroq، بمفتاح يلصقه المعلم مرة واحدة.
-- **عربي وإنجليزي:** الاختبار العربي من اليمين إلى اليسار، وبدائله أ ب ج د.
-- **يُطبع من الجوال:** تُجهَّز الأوراق في الكمبيوتر، وتُطبع من الآيفون في المدرسة على أي طابعة AirPrint.
-- **يصحح بالكاميرا:** يعرف الجوال الاختبار والطالب من الورقة نفسها، فلا يختار المعلم شيئًا قبل المسح.
-- **بياناتك عندك:** كل شيء على كمبيوترك وجوالك، بلا حساب ولا خادم ولا اشتراك.
+- **عربي وإنجليزي:** الاختبار العربي من اليمين إلى اليسار، وبدائله أ ب ج د، في ورقة الأسئلة وورقة الإجابة.
+- **يطبع من الجوال:** على أي طابعة AirPrint في المدرسة.
+- **يصحح بالكاميرا:** يعرف الاختبار والطالب من الورقة نفسها، فلا تختار شيئًا قبل المسح، والمسح يعمل بلا إنترنت.
+- **بياناتك عندك:** كل شيء في جوالك، بلا حساب ولا خادم ولا اشتراك، مع نسخة احتياطية إلى «الملفات» أو iCloud.
 
-<!-- صور الشاشة: docs/screenshots -->
-| ورقة الإجابة (عربي) | ورقة الأسئلة | نافذة الكمبيوتر |
-|---|---|---|
-| ![ورقة إجابة عربية باسم الطالب ورقمه مظللًا](docs/screenshots/sheet-ar.png) | ![ورقة أسئلة عربية كتبها الذكاء الاصطناعي](docs/screenshots/paper-ar.png) | ![صفحة الاختبار في نافذة الكمبيوتر](docs/screenshots/window.png) |
+| ورقة الإجابة (عربي) | ورقة الأسئلة |
+|---|---|
+| ![ورقة إجابة عربية باسم الطالب ورقمه مظللًا](docs/screenshots/sheet-ar.png) | ![ورقة أسئلة عربية كتبها الذكاء الاصطناعي](docs/screenshots/paper-ar.png) |
 
 ---
 
 ## كيف يعمل
 
-1. **الكمبيوتر (Windows):** تضيف فصولك من ملف Excel تصدّره من نور، أو تلصق الأسماء. ثم تنشئ الاختبار بإحدى طريقتين:
-   - **من كتاب:** ترفع ملف PDF، وتحدد الصفحات وعدد أسئلة «الاختيار من متعدد» و«الصح أو الخطأ»، فيكتبها الذكاء الاصطناعي. وإن ربطت مزوّدين يراجع الثاني ما كتبه الأول.
+التطبيق ثلاثة أقسام:
+
+1. **الطلاب:** صدّر قائمة الفصل من نور ملف Excel، ثم استوردها من «الملفات»، أو الصق الأسماء. ولكل طالب رقم من ثلاث خانات يُطبع مظللًا في ورقته.
+2. **الاختبارات:** تنشئ الاختبار بإحدى طريقتين:
+   - **من كتاب:** تضيف ملف PDF، وتحدد الصفحات وعدد الأسئلة، فيكتبها الذكاء الاصطناعي. وإن ربطت مزوّدين يراجع الثاني ما كتبه الأول. ثم تراجع الأسئلة وتعتمدها.
    - **بمفتاح جاهز:** لاختبار أعددته بنفسك، فتدخل مفتاح الإجابة فقط.
-2. **الأوراق:** يجهّز Gradal أوراق كل اختبار:
+
+   ثم تطبع من صفحة الاختبار:
    - ورقة الأسئلة.
    - نموذج الإجابة.
    - ورقة المفتاح.
-   - ورقة إجابة لكل طالب، باسمه ورقمه مظللًا مسبقًا.
+   - أوراق الإجابة بأسماء الطلاب.
    - ورقة إجابة فارغة.
-3. **الجوال (آيفون):** يتزامن مع الكمبيوتر على الشبكة نفسها، فينزّل الأوراق لتطبعها منه في أي مكان. ثم «امسح الأوراق»: توجّه الكاميرا إلى الورقة فتُصحَّح فورًا.
-4. **النتائج:** تعود إلى الكمبيوتر في المزامنة التالية، ومعها:
-   - سجل Excel لكل اختبار، فيه ورقة لكل فصل.
-   - إحصاءات الاختبار.
-   - تحليل لكل سؤال.
+
+   وبعد الاختبار «امسح الأوراق»: توجّه الكاميرا إلى الورقة فتُصحَّح فورًا. ثم ترى النتائج وتحليل كل سؤال، وتشارك السجل ملف Excel.
+3. **الإعدادات:**
+   - ربط الذكاء الاصطناعي.
+   - رأس الورقة: أسطر المدرسة، واسم المعلم، والشعار.
+   - النسخ الاحتياطي واستعادته.
 
 ## التثبيت
 
-### الكمبيوتر (Windows 10 أو 11)
-
-1. نزّل المستودع من زر **Code ← Download ZIP**، ثم فك الضغط في مجلد دائم، مثل «المستندات».
-2. انقر نقرًا مزدوجًا على **`Gradal.cmd`**. في المرة الأولى:
-   - يثبّت Python إن لم يكن مثبتًا.
-   - يجهّز ما يحتاجه البرنامج، في بضع دقائق مرة واحدة.
-   - يضع اختصارًا على سطح المكتب.
-3. إذا سأل Windows عن السماح لـ Python بالشبكة، فاختر **السماح على الشبكات الخاصة**، ليصل إليه الجوال.
-
-بياناتك كلها في مجلد واحد: `المستندات\Gradal`. انسخه احتياطًا من حين لآخر.
-
-### الآيفون
-
-التطبيق غير منشور في App Store بعد. ثبّته من ملف IPA:
+التطبيق غير منشور في App Store بعد، فيُثبَّت من ملف IPA:
 
 1. نزّل `Gradal-unsigned.ipa` من صفحة **[Releases](https://github.com/ibnkabed/gradal/releases)**.
-2. ثبّته بـ [Sideloadly](https://sideloadly.io/) وحساب Apple مجاني. وفي الآيفون: الإعدادات ← عام ← إدارة الأجهزة، ثم وثّق حسابك.
+2. ثبّته بـ [Sideloadly](https://sideloadly.io/) وحساب Apple مجاني. وفي الآيفون: الإعدادات ← عام ← VPN وإدارة الأجهزة، ثم وثّق حسابك.
 3. الحساب المجاني يتطلب إعادة التوقيع كل سبعة أيام. ولنشره رسميًا في المدارس يلزم حساب Apple للمطورين، ثم App Store أو TestFlight.
 
-### ربط الذكاء الاصطناعي (مجانًا)
+## ربط الذكاء الاصطناعي (مجانًا)
 
-من **الإعدادات** في نافذة الكمبيوتر:
+من «الإعدادات»:
 
 1. اختر مزوّدًا، واضغط «افتح صفحة المفتاح».
 2. أنشئ مفتاحًا، ثم الصقه واضغط «اربط».
@@ -78,42 +69,24 @@
 | OpenRouter | نماذج مجانية بحد يومي صغير | احتياط |
 | DeepSeek | مدفوع ورخيص جدًا | يُستعمل بعد المجانيين |
 
-تبقى المفاتيح في جهازك، ولا تُرسل إلا إلى مزوّدها. وتُرسل إلى المزوّد نصوص الصفحات التي اخترتها فقط.
-
-## الأقسام
-
-| في الكمبيوتر | في الجوال |
-|---|---|
-| **الاختبارات:** اختبار جديد من كتاب أو بمفتاح جاهز، ومراجعة الأسئلة، والأوراق، والنتائج | **الاختبارات:** الطباعة، والمسح، والنتائج، وتحليل الأسئلة، ومشاركة السجل |
-| **الطلاب:** الاستيراد من نور أو لصق الأسماء، والأرشفة في سنة جديدة | **الإعدادات:** الاقتران بالكمبيوتر والمزامنة |
-| **الإعدادات:** الذكاء الاصطناعي، والجوال، ورأس الورقة، ومكان البيانات | |
+تبقى المفاتيح في جوالك، ولا تُرسل إلا إلى مزوّدها. وتُرسل إلى المزوّد نصوص الصفحات التي اخترتها فقط.
 
 ## حدود معلومة
 
-- **عدد الأسئلة:** من 5 إلى 60 في الاختبار الواحد، وبدائل كل سؤال أربعة على الأكثر.
+- **عدد الأسئلة:** من 5 إلى 60 في الاختبار الواحد، والبدائل أربعة على الأكثر.
+- **الكتاب:** ثلاثون صفحة على الأكثر للاختبار الواحد.
 - **أرقام الطلاب:** من ثلاث خانات، الأولى رقم الفصل. فالفصول تسعة على الأكثر في السنة الواحدة، و99 طالبًا على الأكثر في الفصل.
 - **الطباعة:** على ورق A4 بمقياس 100٪. والتصغير «ليناسب الصفحة» يفسد قراءة الورقة.
-- **الشبكة:** يتزامن الجوال مع الكمبيوتر على الشبكة المحلية نفسها فقط. والمسح نفسه يعمل بلا إنترنت.
 - **صحة الأسئلة:** الأسئلة المكتوبة بالذكاء الاصطناعي مسودة، والمعلم مسؤول عن مراجعتها قبل اعتمادها.
 
 ## للمطورين
 
-- `pc/`: تطبيق الكمبيوتر، بلغة Python 3.12 ومكتبتها القياسية، ومعها `pymupdf` و`openpyxl` و`xlrd`.
-  - `server.py`: الخادم.
-  - `exam_maker.py`: كاتب الأسئلة.
-  - `ai.py`: المزوّدون.
-  - `sheets.py` و`sheet_layout.py`: ورقة الإجابة.
-  - `paper.py`: ورقة الأسئلة.
-  - `omr.py`: القارئ المرجعي.
-- `ios/`: تطبيق الآيفون بـ SwiftUI ومشروع XcodeGen. يُبنى بلا Mac في GitHub Actions (`.github/workflows/build-ipa.yml`).
-- `shared/`: شكل الورقة (`sheet-layouts.json`) والعقد بين الطرفين (`PROTOCOL.md`).
-- **الاختبارات:**
-
-  ```powershell
-  python -m unittest discover -s pc/tests -v
-  ```
-
-  وقارئ Swift منقول سطرًا بسطر عن `pc/omr.py`، ويفحصه `OMRCheck` في كل بناء.
+- `ios/`: التطبيق بـ SwiftUI ومشروع XcodeGen. يُبنى بلا Mac في GitHub Actions (`.github/workflows/build-ipa.yml`)، وكل وسم `v*` ينشر ملف IPA في Releases.
+- `shared/sheet-layouts.json`: شكل الورقة. و`docs/DATA.md`: البيانات وورقة الإجابة. و`docs/DESIGN.md`: أجزاء التطبيق.
+- `reference/`: النسخ المرجعية بلغة Python، ومنها نُقل كل جزء بلغة Swift. وفي كل بناء:
+  - يُفحص قارئ Swift على صور أوراق مصطنعة، عربية وإنجليزية.
+  - ويُقارن حساب مواضع الأسئلة بالمرجع.
+  - وتُفحص قواعد كتابة الأسئلة واستيراد الطلاب.
 
 المساهمات مرحّب بها: افتح Issue أو Pull Request.
 
@@ -123,19 +96,11 @@
 
 ## English summary
 
-**Gradal** is a free, open-source app for teachers. It writes test questions from any PDF textbook, in
-Arabic or English, with free AI providers (Gemini, Qwen, Groq, Cerebras, Mistral, OpenRouter, or the
-low-cost DeepSeek). It prints the question paper and a personalised bubble answer sheet for each
-student. Then it grades the sheets with the iPhone camera (optical mark recognition, offline) and writes
-an Excel grade book.
+**Gradal** is a free, open-source iPhone app for teachers that works on its own, with no computer. Add a textbook
+PDF (any subject, Arabic or English). Free AI providers (Gemini, Qwen, Groq, Cerebras, Mistral, OpenRouter, or the
+low-cost DeepSeek) write the questions, which you review. The app then makes the question paper, the answer key and
+a personalised bubble answer sheet for each student, and prints them with AirPrint. It grades the filled sheets with
+the camera (offline optical mark recognition) and shares an Excel grade book.
 
-The quiz is made on a Windows PC. The iPhone downloads the papers at sync and prints them with AirPrint
-at school. It scans and grades on the spot, then syncs the results back over the local network.
-Local-first: no account, no server, no subscription. Arabic quizzes are fully right-to-left (choices
-أ ب ج د).
-
-- **PC:** download the ZIP, then double-click `Gradal.cmd`. The first run installs Python if needed.
-- **iPhone:** install the IPA from Releases with Sideloadly.
-- **AI:** paste a free key in Settings. Gradal checks the key and picks a suitable model by itself.
-
-License: [MIT](LICENSE).
+Local-first: no account, no server, no subscription. Arabic quizzes are fully right-to-left (choices أ ب ج د).
+Install the IPA from Releases with Sideloadly. License: [MIT](LICENSE).

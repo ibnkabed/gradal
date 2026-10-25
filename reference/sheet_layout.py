@@ -15,7 +15,7 @@ shared/sheet-layouts.json. The question area depends on the quiz:
   edge and choice أ (index 0) is the rightmost bubble. Positions are per choice index, so the reader
   needs nothing else.
 
-The PC computes this once per quiz and stores it in the quiz record as `sheet` (PROTOCOL.md);
+Gradal computes this once per quiz and stores it in the quiz record as `sheet` (docs/DATA.md);
 the phone reads the bubble positions from there — it never recomputes them.
 
     compute(quiz, layout) -> {"version": 3, "questionBubbles": [[[x, y] x4] per question],

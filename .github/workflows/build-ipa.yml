@@ -25,8 +25,8 @@ jobs:
             ios
             shared
             tools
-            pc/omr.py
-            pc/sheet_layout.py
+            reference/omr.py
+            reference/sheet_layout.py
           sparse-checkout-cone-mode: false
 
       - name: Install XcodeGen
@@ -58,6 +58,11 @@ jobs:
             -derivedDataPath "$RUNNER_TEMP/omr-build" \
             build
 
+      - name: Check the question writer's rules (clean, balance, JSON, model choice)
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/omr-build/Build/Products/Release/OMRCheck" --exam-selftest
+
       - name: Run the Swift reader on the test sheets
         run: |
           set -euo pipefail
@@ -68,6 +73,18 @@ jobs:
           set -euo pipefail
           "$RUNNER_TEMP/omr-build/Build/Products/Release/OMRCheck" --xlsx "$RUNNER_TEMP/record.xlsx"
           python tools/check_record_xlsx.py "$RUNNER_TEMP/record.xlsx"
+
+      - name: Check class list import, roster merge and the zip reader
+        run: |
+          set -euo pipefail
+          "$RUNNER_TEMP/omr-build/Build/Products/Release/OMRCheck" --import-selftest
+
+      - name: Compare the Swift sheet geometry with the Python reference
+        run: |
+          set -euo pipefail
+          python tools/check_geometry.py make "$RUNNER_TEMP/geometry-in.json" 200 1448
+          "$RUNNER_TEMP/omr-build/Build/Products/Release/OMRCheck" --geometry "$RUNNER_TEMP/geometry-in.json" "$RUNNER_TEMP/geometry-swift.json" shared/sheet-layouts.json
+          python tools/check_geometry.py compare "$RUNNER_TEMP/geometry-in.json" "$RUNNER_TEMP/geometry-swift.json"
 
       - name: Build for a physical iPhone without signing
         run: |

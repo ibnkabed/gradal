@@ -1,4 +1,4 @@
-"""Runs the Python reader (pc/omr.py) on the test sheets and compares with the truth files.
+"""Runs the Python reference reader (reference/omr.py) on the test sheets and compares with the truth files.
 
     python tools/check_omr.py [dir]
 
@@ -16,7 +16,7 @@ import numpy as np
 from PIL import Image
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / "pc"))
+sys.path.insert(0, str(HERE.parent / "reference"))
 import omr  # noqa: E402
 
 LAYOUT = json.loads((HERE.parent / "shared" / "sheet-layouts.json").read_text(encoding="utf-8"))

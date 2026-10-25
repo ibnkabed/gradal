@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-/// Generic-password items for this app (the PC token).
+/// Generic-password items for this app (the AI providers' keys, account "ai.<providerId>"). Values are never logged.
 enum Keychain {
     static let service = "io.github.ibnkabed.gradal"
 

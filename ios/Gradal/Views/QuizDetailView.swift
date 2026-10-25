@@ -1,13 +1,16 @@
 import SwiftUI
 
+/// One test: its papers to print, the scan button, the results, the analysis and the record sheet.
 struct QuizDetailView: View {
     let quizId: String
+    @Binding var path: NavigationPath
     @EnvironmentObject private var store: Store
-    @EnvironmentObject private var companion: Companion
-    @EnvironmentObject private var prints: Prints
     @State private var scanning = false
     @State private var shared: SharedFile?
-    @State private var shareError: String?
+    @State private var busyItem: String?
+    @State private var problem: String?
+    @State private var editingKey = false
+    @State private var confirmDelete = false
 
     var body: some View {
         Group {
@@ -17,10 +20,6 @@ struct QuizDetailView: View {
                 Text("حُذف هذا الاختبار.")
                     .foregroundColor(.secondary)
             }
-        }
-        .onAppear { store.openQuizId = quizId }
-        .onDisappear {
-            if store.openQuizId == quizId { store.openQuizId = nil }
         }
     }
 
@@ -33,52 +32,16 @@ struct QuizDetailView: View {
     }
 
     private func content(_ quiz: Quiz) -> some View {
-        let counted = store.countedScans(quiz)
-        let rows: [ResultRow] = counted.map { scan in
+        let rows: [ResultRow] = store.countedScans(quiz).map { scan in
             let g = store.grade(scan, quiz: quiz)
             return ResultRow(scan: scan, name: store.displayName(scan, quiz: quiz), earned: g.earned, possible: g.possible)
         }
         .sorted { $0.name < $1.name }
         let percents = rows.map { percentOf($0.earned, $0.possible) }
         let average = percents.isEmpty ? 0 : percents.reduce(0, +) / Double(percents.count)
+        let classes = quiz.classIds.map { store.className($0) }.filter { !$0.isEmpty }.joined(separator: "، ")
 
         return List {
-            Section {
-                let papers = prints.files(quiz.id)
-                if papers.isEmpty {
-                    Text("زامن مع الكمبيوتر لتنزيل أوراق هذا الاختبار، ثم تطبعها من هنا في أي مكان.")
-                        .font(.footnote)
-                        .foregroundColor(.secondary)
-                }
-                ForEach(papers) { paper in
-                    let url = prints.url(quiz.id, paper.id)
-                    Button {
-                        Prints.printPDF(url, title: "\(quiz.name) — \(paper.title)")
-                    } label: {
-                        HStack {
-                            Label(paper.title, systemImage: "printer")
-                            Spacer()
-                            Text(paper.pages == 1 ? "صفحة" : "\(paper.pages) صفحة")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .contextMenu {
-                        Button {
-                            shared = SharedFile(url: url)
-                        } label: {
-                            Label("مشاركة", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                }
-            } header: {
-                Text("الطباعة")
-            } footer: {
-                if !prints.files(quiz.id).isEmpty {
-                    Text("اختر الطابعة وعدد النسخ في نافذة الطباعة. والضغط المطوّل يشارك الملف.")
-                }
-            }
-
             Section {
                 Button {
                     scanning = true
@@ -90,15 +53,37 @@ struct QuizDetailView: View {
                 .buttonStyle(.borderedProminent)
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
+            } footer: {
+                Text("رمز الاختبار \(String(quiz.code)) · \(countWord(quiz.questionCount, questionsForms)) · \(classes)")
             }
 
             Section {
-                LabeledContent("رمز الاختبار", value: String(quiz.code))
-                if !quiz.sheetReady {
-                    Text("ورقة الإجابة لهذا الاختبار لم تُجهَّز بعد. زامن مع الكمبيوتر قبل المسح.")
-                        .font(.footnote)
-                        .foregroundColor(.orange)
+                ForEach(store.printItems(quiz)) { item in
+                    Button {
+                        open(item, quiz: quiz, share: false)
+                    } label: {
+                        HStack {
+                            Label(item.title, systemImage: "printer")
+                            Spacer()
+                            if busyItem == item.id { ProgressView() }
+                        }
+                    }
+                    .disabled(busyItem != nil)
+                    .contextMenu {
+                        Button {
+                            open(item, quiz: quiz, share: true)
+                        } label: {
+                            Label("مشاركة PDF", systemImage: "square.and.arrow.up")
+                        }
+                    }
                 }
+                if let problem {
+                    Text(problem).font(.caption).foregroundColor(.red)
+                }
+            } header: {
+                Text("الأوراق")
+            } footer: {
+                Text("اختر الطابعة وعدد النسخ في نافذة الطباعة (A4، بلا تصغير). والضغط المطوّل يشارك الملف.")
             }
 
             Section("الإحصاءات") {
@@ -131,10 +116,6 @@ struct QuizDetailView: View {
                             Spacer()
                             Text("\(Int(percentOf(row.earned, row.possible).rounded()))٪")
                                 .font(.headline.monospacedDigit())
-                            if store.db.pendingScanIds.contains(row.scan.id) {
-                                Image(systemName: "arrow.up.circle")
-                                    .foregroundColor(.secondary)
-                            }
                         }
                     }
                 }
@@ -145,27 +126,70 @@ struct QuizDetailView: View {
                     do {
                         shared = SharedFile(url: try store.recordFile(quiz))
                     } catch {
-                        shareError = "تعذر إنشاء ملف السجل."
+                        problem = "تعذّر إنشاء ملف السجل."
                     }
                 } label: {
-                    Label("مشاركة السجل", systemImage: "square.and.arrow.up")
+                    Label("مشاركة السجل (Excel)", systemImage: "tablecells")
                 }
-                if let shareError {
-                    Text(shareError).font(.caption).foregroundColor(.red)
+                if let paperId = quiz.paperId {
+                    NavigationLink {
+                        PaperReviewView(paperId: paperId) { _ in
+                            if !path.isEmpty { path.removeLast() }
+                        }
+                    } label: {
+                        Label("عدّل الأسئلة", systemImage: "pencil")
+                    }
+                } else {
+                    Button {
+                        editingKey = true
+                    } label: {
+                        Label("عدّل المفتاح", systemImage: "pencil")
+                    }
                 }
+                Button("احذف الاختبار", role: .destructive) { confirmDelete = true }
             } footer: {
-                Text("ملف Excel بدرجات الطلاب في كل سؤال.")
+                Text("السجل ملف Excel فيه ورقة لكل فصل ودرجة كل طالب في كل سؤال.")
             }
         }
         .navigationTitle(quiz.name)
         .sheet(item: $shared) { file in
             ShareSheet(items: [file.url])
         }
+        .sheet(isPresented: $editingKey) {
+            ManualQuizView(quizId: quiz.id) { _ in }
+                .environmentObject(store)
+                .environment(\.layoutDirection, .rightToLeft)
+        }
+        .confirmationDialog("يُحذف «\(quiz.name)» ونتائجه؟", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("احذف", role: .destructive) {
+                store.deleteQuiz(quiz.id)
+                if !path.isEmpty { path.removeLast() }
+            }
+            Button("إلغاء", role: .cancel) {}
+        }
         .fullScreenCover(isPresented: $scanning) {
             ScannerView()
                 .environmentObject(store)
-                .environmentObject(companion)
                 .environment(\.layoutDirection, .rightToLeft)
+        }
+    }
+
+    /// Makes the PDF (first time only) then prints or shares it.
+    private func open(_ item: PrintItem, quiz: Quiz, share: Bool) {
+        problem = nil
+        busyItem = item.id
+        Task {
+            defer { busyItem = nil }
+            do {
+                let url = try await store.printFile(item, quiz: quiz)
+                if share {
+                    shared = SharedFile(url: url)
+                } else {
+                    Printing.printPDF(url, title: "\(quiz.name) — \(item.title)")
+                }
+            } catch {
+                problem = error.localizedDescription
+            }
         }
     }
 }
@@ -191,8 +215,7 @@ struct ItemAnalysisView: View {
             var letters = [Int](repeating: 0, count: Grading.letters.count)
             for scan in scans {
                 let answer = i < scan.answers.count ? scan.answers[i] : ""
-                let key = Grading.key(quiz, version: scan.version)
-                let accepted = i < key.count ? key[i] : ""
+                let accepted = i < quiz.key.count ? quiz.key[i] : ""
                 if answer.isEmpty {
                     blank += 1
                 } else if answer.count > 1 {
@@ -205,8 +228,7 @@ struct ItemAnalysisView: View {
                     if Grading.isCorrect(answer: answer, key: accepted) { correct += 1 }
                 }
             }
-            let keyA = Grading.key(quiz, version: 0)
-            return Item(id: i, key: i < keyA.count ? keyA[i] : "", counted: counted, correct: correct,
+            return Item(id: i, key: i < quiz.key.count ? quiz.key[i] : "", counted: counted, correct: correct,
                         letters: letters, blank: blank, multiple: multiple)
         }
     }

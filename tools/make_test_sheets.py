@@ -24,7 +24,7 @@ from PIL import Image, ImageDraw, ImageFont
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent / "shared"))
 from build_layouts import encode  # noqa: E402
-sys.path.insert(0, str(HERE.parent / "pc"))
+sys.path.insert(0, str(HERE.parent / "reference"))
 import sheet_layout  # noqa: E402
 
 LAYOUT = json.loads((HERE.parent / "shared" / "sheet-layouts.json").read_text(encoding="utf-8"))

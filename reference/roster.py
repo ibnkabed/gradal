@@ -1,4 +1,4 @@
-"""Class lists (shared/PROTOCOL.md, «Class lists»): {classes: [{name, students: [name | {name, nationalId}]}]},
+"""Class lists (docs/DATA.md, «Class lists»): {classes: [{name, students: [name | {name, nationalId}]}]},
 read from the teacher's Excel export of Noor or pasted names (students_import.py).
 
 - classes match by name among the current ones; a new class gets the next free prefix 1-9 (prefixes of archived

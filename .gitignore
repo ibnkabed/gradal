@@ -8,3 +8,4 @@ tools/test-sheets/
 *.log
 .DS_Store
 Thumbs.db
+/NOTES.md

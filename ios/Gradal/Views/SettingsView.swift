@@ -94,6 +94,10 @@ struct SettingsView: View {
                     Text("مجاني ومفتوح المصدر. يكتب الاختبار من كتابك بالذكاء الاصطناعي، ويطبع أوراقه، ويصححها بالكاميرا.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
+                    Text("Copyright (c) 2026 IbnKabed")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .environment(\.layoutDirection, .leftToRight)
                 }
             }
             .navigationTitle("الإعدادات")

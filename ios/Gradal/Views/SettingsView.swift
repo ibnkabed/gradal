@@ -99,14 +99,14 @@ struct SettingsView: View {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .environment(\.layoutDirection, .leftToRight)
+                        .id("copyright")
                 }
-                .id("about")
             }
             .task {
                 // screenshot mode only: show the about section with the copyright line
                 guard Demo.screen == "about" else { return }
                 try? await Task.sleep(for: .milliseconds(500))
-                proxy.scrollTo("about", anchor: .bottom)
+                proxy.scrollTo("copyright", anchor: .center)
             }
             }
             .navigationTitle("الإعدادات")

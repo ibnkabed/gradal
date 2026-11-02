@@ -22,6 +22,7 @@ struct SettingsView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollViewReader { proxy in
             Form {
                 Section {
                     ForEach(AIProviders.all, id: \.id) { p in
@@ -99,6 +100,14 @@ struct SettingsView: View {
                         .foregroundColor(.secondary)
                         .environment(\.layoutDirection, .leftToRight)
                 }
+                .id("about")
+            }
+            .task {
+                // screenshot mode only: show the about section with the copyright line
+                guard Demo.screen == "about" else { return }
+                try? await Task.sleep(for: .milliseconds(500))
+                proxy.scrollTo("about", anchor: .bottom)
+            }
             }
             .navigationTitle("الإعدادات")
             .onAppear { settings = store.db.settings }

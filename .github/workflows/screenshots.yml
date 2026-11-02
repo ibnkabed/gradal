@@ -55,7 +55,7 @@ jobs:
           bundle=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")
           xcrun simctl install "$UDID" "$app"
           mkdir -p screenshots
-          for screen in quizzes detail students settings; do
+          for screen in quizzes detail students settings about; do
             xcrun simctl terminate "$UDID" "$bundle" || true
             xcrun simctl launch "$UDID" "$bundle" -demo "$screen"
             sleep 8

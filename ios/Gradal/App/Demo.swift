@@ -1,7 +1,7 @@
 import Foundation
 
 /// Screenshot mode for the README (2026-11-02): `-demo <screen>` opens the app on sample classes, tests and
-/// graded papers in a folder of its own, never the teacher's. Screens: quizzes, detail, students, settings.
+/// graded papers in a folder of its own, never the teacher's. Screens: quizzes, detail, students, settings, about (settings scrolled to «عن التطبيق»).
 /// The CI job `screenshots.yml` launches each one in the simulator and saves the screen.
 enum Demo {
     static let screen: String? = {
@@ -14,7 +14,7 @@ enum Demo {
     static var tab: Int {
         switch screen {
         case "students": return 1
-        case "settings": return 2
+        case "settings", "about": return 2
         default: return 0
         }
     }

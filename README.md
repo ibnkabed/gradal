@@ -34,6 +34,10 @@
 |---|---|
 | ![ورقة أسئلة عربية برأس الوزارة كتبها الذكاء الاصطناعي](docs/screenshots/paper-ar.png) | ![ورقة إجابة عربية برأس الوزارة والدوائر مظللة بالمفتاح](docs/screenshots/sheet-ar.png) |
 
+| الاختبارات | نتائج اختبار | الطلاب | الذكاء الاصطناعي |
+| --- | --- | --- | --- |
+| <img src="docs/screenshots/app-quizzes.png" width="190" alt="قائمة الاختبارات"> | <img src="docs/screenshots/app-detail.png" width="190" alt="أوراق الاختبار وإحصاءاته"> | <img src="docs/screenshots/app-students.png" width="190" alt="الفصول والطلاب"> | <img src="docs/screenshots/app-settings.png" width="190" alt="مزودو الذكاء الاصطناعي المجانيون"> |
+
 ## أقسام التطبيق
 
 | القسم | ما فيه |

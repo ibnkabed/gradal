@@ -5,7 +5,11 @@ struct QuizListView: View {
     @EnvironmentObject private var store: Store
     @EnvironmentObject private var ai: AIClient
     @State private var scanning = false
-    @State private var path = NavigationPath()
+    @State private var path: NavigationPath = {
+        var p = NavigationPath()
+        if let id = Demo.openQuiz { p.append(Route.quiz(id)) }   // screenshot mode only
+        return p
+    }()
     @State private var newFromBook = false
     @State private var newManual = false
 

@@ -1,0 +1,70 @@
+# README screenshots: builds Gradal for the iOS simulator, opens each demo screen (`-demo <screen>`, sample
+# data in its own folder) and saves it. Run by hand; the images come back as the artifact `screenshots`.
+name: Gradal screenshots
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  screenshots:
+    runs-on: macos-26
+    timeout-minutes: 40
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Pick and boot an iPhone simulator
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available -j | python3 -c '
+          import json, sys
+          devs = [d for rt, ds in json.load(sys.stdin)["devices"].items() if "iOS" in rt for d in ds]
+          pro = [d for d in devs if "Pro Max" not in d["name"] and "Pro" in d["name"] and d["name"].startswith("iPhone")]
+          print((pro or [d for d in devs if d["name"].startswith("iPhone")])[-1]["udid"])')
+          echo "UDID=$udid" >> "$GITHUB_ENV"
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
+
+      - name: Build for the simulator
+        run: |
+          set -euo pipefail
+          xcodebuild \
+            -project ios/Gradal.xcodeproj \
+            -scheme Gradal \
+            -configuration Debug \
+            -destination "id=$UDID" \
+            -derivedDataPath ios/build \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Take the screenshots
+        run: |
+          set -euo pipefail
+          app=$(ls -d ios/build/Build/Products/Debug-iphonesimulator/Gradal.app)
+          bundle=$(/usr/libexec/PlistBuddy -c 'Print CFBundleIdentifier' "$app/Info.plist")
+          xcrun simctl install "$UDID" "$app"
+          mkdir -p screenshots
+          for screen in quizzes detail students settings; do
+            xcrun simctl terminate "$UDID" "$bundle" || true
+            xcrun simctl launch "$UDID" "$bundle" -demo "$screen"
+            sleep 8
+            xcrun simctl io "$UDID" screenshot "screenshots/$screen.png"
+          done
+          ls -l screenshots
+
+      - name: Upload the screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: screenshots/

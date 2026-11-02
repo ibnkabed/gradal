@@ -74,13 +74,13 @@ final class Store: ObservableObject {
     private var booksFolder: URL { folder.appendingPathComponent("books", isDirectory: true) }
     private var printsFolder: URL { folder.appendingPathComponent("prints", isDirectory: true) }
 
-    static var dataFolder: URL {
+    nonisolated static var dataFolder: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Gradal", isDirectory: true)
     }
 
-    init() {
-        folder = Self.dataFolder
+    init(folder: URL = Store.dataFolder) {
+        self.folder = folder
         db = StoreFile()
         load()
     }
@@ -525,6 +525,15 @@ final class Store: ObservableObject {
         db.scans.append(scan)
         save()
         return card(for: scan, quiz: quiz)
+    }
+
+    /// A scan for the README screenshots only (App/Demo.swift): graded like a real one, with no image.
+    func addDemoScan(quizId: String, studentId: String, answers: [String]) {
+        guard let quiz = quiz(quizId), let student = student(studentId) else { return }
+        let g = Grading.grade(quiz, answers: answers)
+        db.scans.append(Scan(quizId: quiz.id, studentId: student.id, gradalId: student.gradalId, answers: answers,
+                             earned: g.earned, possible: g.possible, scannedAt: Stamp.now(), hasImage: false))
+        save()
     }
 
     /// Teacher edits (answers, student). Re-grades.

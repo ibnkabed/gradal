@@ -117,9 +117,82 @@ func sheetSelfTest(layouts: SheetLayouts, outDir: URL?) -> [String] {
             }
         }
     }
+    if let outDir {
+        failures += gradedSample(layouts: layouts, settings: settings, outDir: outDir)
+    }
     return failures
 }
+/// The README's correction-copy sample (2026-11-03): a personalised Arabic sheet of 20 questions in three
+/// sections, marked in pencil by a sample student (right, wrong, two letters on one question, one left blank),
+/// read back with SheetReader and drawn by GradedPage as the app draws it, written as graded-ar.png.
+/// The marks are drawn on the rendered page, so it shows the app's drawing, not a camera photo.
+func gradedSample(layouts: SheetLayouts, settings: Settings, outDir: URL) -> [String] {
+    let pxPerMm = 6.0
+    let count = 20
+    let key = ["B", "D", "A", "C", "A", "B", "D", "C", "A", "B", "C", "D", "B", "A", "C", "D", "A", "B", "C", "D"]
+    var marks = key
+    marks[3] = "A"; marks[8] = "D"; marks[12] = "C"; marks[16] = "AB"; marks[18] = ""
+    let sections = [QuizSection(name: "المفردات", from: 1, to: 8), QuizSection(name: "القواعد", from: 9, to: 16),
+                    QuizSection(name: "القراءة", from: 17, to: 20)]
+    var quiz = Quiz(code: 4821, name: "اختبار الوحدة الثالثة", date: "2026-11-03", classIds: [], language: "ar",
+                    key: key, sections: sections,
+                    header: QuizHeader(subject: "اللغة الإنجليزية", title: "اختبار الوحدة الثالثة",
+                                       grade: "أول ثانوي", extra: ""))
+    guard let sheet = try? SheetGeometry.compute(questionCount: count, sections: sections, rtl: true, layout: layouts) else {
+        return ["graded sample: no geometry"]
+    }
+    quiz.sheet = sheet
+    let person = SheetPerson(studentName: "محمد عبدالله", gradalId: "312", className: "أول ثانوي 1")
+    let pdf = AnswerSheetPDF.make(quiz: quiz, people: [person], settings: settings, layout: layouts, key: false)
+    guard let page = rasterizeFirstPage(pdf, pxPerMm: pxPerMm) else { return ["graded sample: cannot rasterise"] }
 
+    // pencil marks on the rendered page (CGContext y is up, sheet millimetres are y down)
+    let w = page.image.width, h = page.image.height
+    guard let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                              space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue) else {
+        return ["graded sample: no bitmap"]
+    }
+    ctx.draw(page.image, in: CGRect(x: 0, y: 0, width: w, height: h))
+    ctx.setFillColor(CGColor(gray: 0.18, alpha: 1))
+    let r = layouts.bubbleDiameterMm / 2 * 0.85 * pxPerMm
+    for (q, letters) in marks.enumerated() {
+        for (i, letter) in GradedPage.letters.enumerated() where letters.contains(letter) {
+            let p = sheet.questionBubbles[q][i]
+            let x = p[0] * pxPerMm, y = Double(h) - p[1] * pxPerMm
+            ctx.fillEllipse(in: CGRect(x: x - r, y: y - r, width: 2 * r, height: 2 * r))
+        }
+    }
+    guard let marked = ctx.makeImage(), let data = ctx.data else { return ["graded sample: no marked image"] }
+    var bytes = [UInt8](repeating: 0, count: w * h)
+    let row = ctx.bytesPerRow
+    for y in 0..<h {
+        for x in 0..<w { bytes[y * w + x] = data.load(fromByteOffset: y * row + x, as: UInt8.self) }
+    }
+    let gray = GrayImage(width: w, height: h, pixels: bytes)
+    guard let read = SheetReader.read(gray, layouts: layouts, questionCount: count,
+                                      questionBubbles: sheet.questionBubbles) else {
+        return ["graded sample: NOT FOUND by the reader"]
+    }
+    var failures: [String] = []
+    if read.answers != marks { failures.append("graded sample: read \(read.answers) != marks \(marks)") }
+
+    var earned = 0.0
+    let questions = (0..<count).map { q -> GradedPage.Question in
+        let answer = q < read.answers.count ? read.answers[q] : ""
+        let right = answer.count == 1 && key[q].contains(answer)
+        if right { earned += 1 }
+        return GradedPage.Question(bubbles: sheet.questionBubbles[q], answer: answer, key: key[q], earned: right ? 1 : 0)
+    }
+    let graded = GradedPage.Page(image: marked, questions: questions, earned: earned, possible: Double(count),
+                                 scoreLabel: "الدرجة", noImage: "")
+    if let image = GradedPage.image(graded, bubbleRadiusMm: layouts.bubbleDiameterMm / 2) {
+        writePNG(image, to: outDir.appendingPathComponent("graded-ar.png"))
+        print("graded sample: \(GradedPage.number(earned)) / \(count), written")
+    } else {
+        failures.append("graded sample: GradedPage drew nothing")
+    }
+    return failures
+}
 /// Page 1 of a PDF drawn on white into an 8-bit gray bitmap at pxPerMm, as the reader's GrayImage
 /// (row 0 at the top, like loadGray) and as a CGImage for the PNGs.
 func rasterizeFirstPage(_ pdf: Data, pxPerMm: Double) -> (gray: GrayImage, image: CGImage)? {

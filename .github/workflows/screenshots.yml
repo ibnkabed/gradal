@@ -4,6 +4,10 @@ name: Gradal screenshots
 
 on:
   workflow_dispatch:
+    inputs:
+      appearance:
+        description: light or dark
+        default: light
 
 permissions:
   contents: read
@@ -34,6 +38,7 @@ jobs:
           echo "UDID=$udid" >> "$GITHUB_ENV"
           xcrun simctl boot "$udid"
           xcrun simctl bootstatus "$udid" -b
+          xcrun simctl ui "$udid" appearance "${{ inputs.appearance || 'light' }}"
           xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 --wifiBars 3
 
       - name: Build for the simulator

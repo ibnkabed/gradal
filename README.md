@@ -44,6 +44,14 @@
 | --- | --- | --- | --- | --- |
 | <img src="docs/screenshots/app-quizzes.png" width="160" alt="قائمة الاختبارات"> | <img src="docs/screenshots/app-detail.png" width="160" alt="أوراق الاختبار وإحصاءاته"> | <img src="docs/screenshots/app-students.png" width="160" alt="الفصول والطلاب"> | <img src="docs/screenshots/app-settings.png" width="160" alt="مزودو الذكاء الاصطناعي المجانيون"> | <img src="docs/screenshots/app-about.png" width="160" alt="عن التطبيق وسطر الحقوق"> |
 
+## الوضع الداكن
+
+يتبع التطبيق مظهر الآيفون تلقائيًا، فإذا كان الجوال على الوضع الداكن ظهر به. وتبقى أوراق الاختبار بيضاء للطباعة.
+
+| الاختبارات | نتائج اختبار | الطلاب | الذكاء الاصطناعي |
+| --- | --- | --- | --- |
+| <img src="docs/screenshots/dark/quizzes.png" width="160" alt="شاشة بالوضع الداكن"> | <img src="docs/screenshots/dark/detail.png" width="160" alt="شاشة بالوضع الداكن"> | <img src="docs/screenshots/dark/students.png" width="160" alt="شاشة بالوضع الداكن"> | <img src="docs/screenshots/dark/settings.png" width="160" alt="شاشة بالوضع الداكن"> |
+
 ## أقسام التطبيق
 
 | القسم | ما فيه |

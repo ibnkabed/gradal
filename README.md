@@ -19,7 +19,7 @@
 
 [![شاهد المقطع التوضيحي لتطبيق Gradal](docs/video/thumbnail.jpg)](https://youtu.be/j_o0DEjSl-c)
 
-**[شاهده على YouTube](https://youtu.be/j_o0DEjSl-c)** · [نزّل المقطع](docs/video/Gradal-demo-ar.mp4)
+**[شاهده على YouTube](https://youtu.be/j_o0DEjSl-c)**
 
 ## مزاياه
 

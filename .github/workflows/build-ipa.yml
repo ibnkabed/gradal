@@ -29,6 +29,19 @@ jobs:
             reference/sheet_layout.py
           sparse-checkout-cone-mode: false
 
+      - name: Number this build (CFBundleVersion = Info.plist base + run number)
+        # The base in Info.plist is never lowered; the run number only grows, so every IPA is newer.
+        # CFBundleShortVersionString is raised by hand in Info.plist for every release with a visible change.
+        run: |
+          set -euo pipefail
+          plist=ios/Gradal/Info.plist
+          base=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$plist")
+          build=$((base + ${{ github.run_number }}))
+          /usr/libexec/PlistBuddy -c "Set :CFBundleVersion $build" "$plist"
+          short=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist")
+          echo "GRADAL_BUILD=$build" >> "$GITHUB_ENV"
+          echo "Gradal $short ($build)" | tee -a "$GITHUB_STEP_SUMMARY"
+
       - name: Install XcodeGen
         run: brew install xcodegen
 
@@ -137,6 +150,8 @@ jobs:
           mkdir -p artifact/Payload
           ditto "$app_path" "artifact/Payload/Gradal.app"
           cd artifact
+          got=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" Payload/Gradal.app/Info.plist)
+          test "$got" = "$GRADAL_BUILD"
           /usr/bin/zip -qry Gradal-unsigned.ipa Payload
           shasum -a 256 Gradal-unsigned.ipa > Gradal-unsigned.ipa.sha256
 
